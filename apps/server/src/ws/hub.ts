@@ -34,7 +34,8 @@ export class WebSocketHub {
   }
 
   public handleUpgrade(req: IncomingMessage, socket: any, head: Buffer) {
-    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+    const url = new URL(req.url || '/', `http://${host}`);
     const pathname = url.pathname;
 
     if (pathname === '/ws/node') {
@@ -53,7 +54,8 @@ export class WebSocketHub {
   // 1. Worker Node Agent WebSocket Handler
   private setupNodeWss() {
     this.nodeWss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-      const url = new URL(req.url || '', `http://${req.headers.host}`);
+      const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+      const url = new URL(req.url || '/', `http://${host}`);
       const token = url.searchParams.get('token') || (req.headers['x-node-token'] as string);
 
       if (!token) {
@@ -174,7 +176,8 @@ export class WebSocketHub {
   // 2. Browser Client Terminal WebSocket Handler (xterm.js proxy)
   private setupTerminalWss() {
     this.terminalWss.on('connection', (clientWs: WebSocket, req: IncomingMessage) => {
-      const url = new URL(req.url || '', `http://${req.headers.host}`);
+      const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+      const url = new URL(req.url || '/', `http://${host}`);
       const token = url.searchParams.get('token');
       const vpsId = url.searchParams.get('vpsId');
 

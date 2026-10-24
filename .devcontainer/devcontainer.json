@@ -1,0 +1,29 @@
+{
+  "name": "VPS Control Panel",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [4000, 3000, 4001],
+  "portsAttributes": {
+    "4000": {
+      "label": "VPS Panel Master Controller & UI",
+      "onAutoForward": "openBrowser",
+      "protocol": "https"
+    },
+    "3000": {
+      "label": "Vite Client Dev Server",
+      "onAutoForward": "silent"
+    },
+    "4001": {
+      "label": "Worker Node Agent",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "npm run install:all && cd apps/client && npm run build && cd ../server && npm run seed",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

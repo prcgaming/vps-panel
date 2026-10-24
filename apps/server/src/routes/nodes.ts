@@ -39,8 +39,8 @@ router.post('/join-token', authenticate, requireAdmin, (req: Request, res: Respo
     VALUES (?, ?, ?)
   `).run(token, name, expiresAt);
 
-  const host = req.get('host') || '127.0.0.1:4000';
-  const protocol = req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host') || '127.0.0.1:4000';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
   const panelUrl = `${protocol}://${host}`;
   const curlCommand = `curl -sSL ${panelUrl}/api/install-script | bash -s -- --panel-url ${panelUrl} --token ${token} --driver docker`;
 

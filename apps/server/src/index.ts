@@ -23,6 +23,7 @@ seedDatabase();
 
 // 2. Initialize Express
 const app = express();
+app.set('trust proxy', true); // Enable trust proxy for GitHub Codespaces, Cloudflare, and reverse proxies
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 

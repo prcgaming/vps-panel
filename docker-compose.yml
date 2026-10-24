@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  vps-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vps-panel-master
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - JWT_SECRET=vps-panel-change-this-secret-in-production-2026
+    volumes:
+      - panel_data:/app/apps/server/data
+
+volumes:
+  panel_data:
+    driver: local
