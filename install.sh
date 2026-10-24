@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# VPS PANEL - Universal Multi-Node Installation Script
+# VPS PANEL - Universal Multi-Node Installation & Cloudflare Setup Script
 # Supports: Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/RHEL/Rocky/Alma 8/9
 # GitHub: https://github.com/prcgaming/vps-panel
 # ==============================================================================
@@ -35,10 +35,11 @@ cat << "EOF"
                                                    
            Multi-Node VPS Control Panel
          Hybrid Hypervisor (Docker / KVM)
+         Cloudflare Zero-Trust & SSL Ready
 EOF
 echo -e "${NC}"
 echo -e "${PURPLE}===================================================================${NC}"
-echo -e "${GREEN} Automated Multi-Node VPS Panel Installer & Hypervisor Daemon Setup${NC}"
+echo -e "${GREEN} Automated Multi-Node VPS Panel Installer & Cloudflare Setup${NC}"
 echo -e "${PURPLE}===================================================================${NC}\n"
 
 # Check root privilege
@@ -74,10 +75,10 @@ install_base_deps() {
   echo -e "\n${YELLOW}--> Updating system packages and installing prerequisites...${NC}"
   if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
     apt-get update -y
-    apt-get install -y curl wget git tar build-essential ufw net-tools
+    apt-get install -y curl wget git tar build-essential ufw net-tools openssl
   elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
     yum install -y epel-release || true
-    yum install -y curl wget git tar make gcc gcc-c++ firewalld net-tools
+    yum install -y curl wget git tar make gcc gcc-c++ firewalld net-tools openssl
   fi
 
   # Check / Install Node.js
@@ -130,6 +131,210 @@ setup_repository() {
   
   cd "$INSTALL_DIR"
 }
+
+# ==============================================================================
+# CLOUDFLARE DOMAIN & SSL CONFIGURATION
+# ==============================================================================
+
+# Option A: Cloudflare via Nginx Reverse Proxy with Real IP and SSL
+configure_nginx_cloudflare() {
+  local DOMAIN_NAME="$1"
+
+  if [ -z "$DOMAIN_NAME" ]; then
+    echo -e "\n${CYAN}Enter your domain name pointed to this VPS via Cloudflare DNS (e.g. panel.example.com):${NC}"
+    read -r DOMAIN_NAME
+  fi
+
+  if [ -z "$DOMAIN_NAME" ]; then
+    echo -e "${RED}[ERROR] Domain name cannot be empty!${NC}"
+    return 1
+  fi
+
+  echo -e "\n${YELLOW}--> Installing Nginx and Certbot for Cloudflare domain: ${BOLD}$DOMAIN_NAME${NC}..."
+
+  if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+    apt-get update -y
+    apt-get install -y nginx certbot python3-certbot-nginx
+  elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
+    yum install -y nginx certbot python3-certbot-nginx
+    systemctl enable nginx
+  fi
+
+  # Create Cloudflare Real IP restoration config
+  echo -e "${YELLOW}--> Configuring Cloudflare Real IP restoration in Nginx...${NC}"
+  cat > /etc/nginx/conf.d/cloudflare_real_ip.conf 2>/dev/null || cat > /etc/nginx/cloudflare_real_ip.conf << 'CFOVERLAY'
+# Cloudflare Official IPv4 CIDR Blocks
+set_real_ip_from 173.245.48.0/20;
+set_real_ip_from 103.21.244.0/22;
+set_real_ip_from 103.22.200.0/22;
+set_real_ip_from 103.31.4.0/22;
+set_real_ip_from 141.101.64.0/18;
+set_real_ip_from 108.162.192.0/18;
+set_real_ip_from 190.93.240.0/20;
+set_real_ip_from 188.114.96.0/20;
+set_real_ip_from 197.234.240.0/22;
+set_real_ip_from 198.41.128.0/17;
+set_real_ip_from 162.158.0.0/15;
+set_real_ip_from 104.16.0.0/13;
+set_real_ip_from 104.24.0.0/14;
+set_real_ip_from 172.64.0.0/13;
+set_real_ip_from 131.0.72.0/22;
+
+# Cloudflare Official IPv6 CIDR Blocks
+set_real_ip_from 2400:cb00::/32;
+set_real_ip_from 2606:4700::/32;
+set_real_ip_from 2803:f800::/32;
+set_real_ip_from 2405:b500::/32;
+set_real_ip_from 2405:8100::/32;
+set_real_ip_from 2a06:98c0::/29;
+set_real_ip_from 2c0f:f248::/32;
+
+real_ip_header CF-Connecting-IP;
+CFOVERLAY
+
+  # Create Domain VHost Config with full WebSocket proxy support for xterm.js
+  echo -e "${YELLOW}--> Writing Nginx reverse proxy configuration for $DOMAIN_NAME...${NC}"
+  local VHOST_CONF="/etc/nginx/conf.d/${DOMAIN_NAME}.conf"
+  if [ -d "/etc/nginx/sites-available" ]; then
+    VHOST_CONF="/etc/nginx/sites-available/${DOMAIN_NAME}.conf"
+  fi
+
+  cat > "$VHOST_CONF" << NGINXEOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN_NAME;
+
+    client_max_body_size 500M;
+
+    location / {
+        proxy_pass http://127.0.0.1:$PANEL_PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+
+        # WebSocket timeouts for terminal streaming
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}
+NGINXEOF
+
+  if [ -d "/etc/nginx/sites-enabled" ]; then
+    ln -sf "$VHOST_CONF" "/etc/nginx/sites-enabled/${DOMAIN_NAME}.conf"
+  fi
+
+  nginx -t
+  systemctl restart nginx
+
+  # Open Firewall for HTTP & HTTPS
+  if command -v ufw >/dev/null 2>&1; then
+    ufw allow 80/tcp >/dev/null 2>&1 || true
+    ufw allow 443/tcp >/dev/null 2>&1 || true
+  elif command -v firewall-cmd >/dev/null 2>&1; then
+    firewall-cmd --permanent --add-service=http >/dev/null 2>&1 || true
+    firewall-cmd --permanent --add-service=https >/dev/null 2>&1 || true
+    firewall-cmd --reload >/dev/null 2>&1 || true
+  fi
+
+  # Attempt Certbot SSL Certificate
+  echo -e "\n${YELLOW}--> Obtaining Let's Encrypt / Cloudflare SSL certificate for ${DOMAIN_NAME}...${NC}"
+  if certbot --nginx -d "$DOMAIN_NAME" --non-interactive --agree-tos --register-unsafely-without-email --redirect 2>/dev/null; then
+    echo -e "${GREEN}[OK] SSL Certificate successfully installed!${NC}"
+  else
+    echo -e "${YELLOW}[NOTE] Automatic Certbot certificate generation skipped or waiting for DNS propagation.${NC}"
+    echo -e "${YELLOW}If your domain has Cloudflare Proxy (Orange Cloud) enabled with 'Flexible' or 'Full' SSL, your connection is already encrypted via Cloudflare Edge!${NC}"
+  fi
+
+  systemctl reload nginx
+
+  echo -e "\n${GREEN}===================================================================${NC}"
+  echo -e "${GREEN}${BOLD} Cloudflare Domain Configured Successfully!${NC}"
+  echo -e "${GREEN}===================================================================${NC}"
+  echo -e "${CYAN}Panel URL:${NC}       ${BOLD}https://${DOMAIN_NAME}${NC}"
+  echo -e "${CYAN}Cloudflare Proxy:${NC} ${BOLD}Active with Real-IP Restoration${NC}"
+  echo -e "${CYAN}WebSocket Stream:${NC} ${BOLD}Enabled (xterm.js Web Console supported)${NC}"
+  echo -e "${GREEN}===================================================================${NC}\n"
+}
+
+# Option B: Cloudflare Zero Trust Tunnel (No open ports needed!)
+configure_cloudflare_tunnel() {
+  local TUNNEL_TOKEN="$1"
+
+  if [ -z "$TUNNEL_TOKEN" ]; then
+    echo -e "\n${CYAN}To set up a Cloudflare Tunnel:${NC}"
+    echo -e "1. Go to Cloudflare Zero Trust Dashboard -> Networks -> Tunnels"
+    echo -e "2. Create a Tunnel (e.g. 'vps-panel') and select 'Debian/Ubuntu' or 'RedHat'"
+    echo -e "3. Copy your Tunnel Token"
+    echo -e "\n${CYAN}Enter your Cloudflare Tunnel Token:${NC}"
+    read -r TUNNEL_TOKEN
+  fi
+
+  if [ -z "$TUNNEL_TOKEN" ]; then
+    echo -e "${RED}[ERROR] Cloudflare Tunnel Token cannot be empty!${NC}"
+    return 1
+  fi
+
+  echo -e "\n${YELLOW}--> Installing Cloudflare Tunnel daemon (cloudflared)...${NC}"
+  
+  ARCH=$(uname -m)
+  case "$ARCH" in
+    x86_64) CF_ARCH="amd64" ;;
+    aarch64|arm64) CF_ARCH="arm64" ;;
+    *) CF_ARCH="amd64" ;;
+  esac
+
+  if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+    curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}.deb" -o cloudflared.deb
+    dpkg -i cloudflared.deb || apt-get install -f -y
+    rm -f cloudflared.deb
+  elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
+    curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}.rpm" -o cloudflared.rpm
+    rpm -i cloudflared.rpm || yum localinstall -y cloudflared.rpm
+    rm -f cloudflared.rpm
+  fi
+
+  echo -e "${YELLOW}--> Installing cloudflared system service with your token...${NC}"
+  cloudflared service install "$TUNNEL_TOKEN"
+  systemctl enable cloudflared
+  systemctl restart cloudflared
+
+  echo -e "\n${GREEN}===================================================================${NC}"
+  echo -e "${GREEN}${BOLD} Cloudflare Tunnel Successfully Connected!${NC}"
+  echo -e "${GREEN}===================================================================${NC}"
+  echo -e "${CYAN}Status:${NC}        ${BOLD}cloudflared service running${NC}"
+  echo -e "${CYAN}Target URL:${NC}    ${BOLD}http://localhost:${PANEL_PORT}${NC}"
+  echo -e "${PURPLE}-------------------------------------------------------------------${NC}"
+  echo -e "${YELLOW}In Cloudflare Zero Trust Dashboard, make sure your Public Hostname${NC}"
+  echo -e "${YELLOW}points to: Service: HTTP -> localhost:${PANEL_PORT}${NC}"
+  echo -e "${GREEN}===================================================================${NC}\n"
+}
+
+# Sub-menu for Cloudflare Domain Configuration
+menu_cloudflare() {
+  echo -e "\n${PURPLE}===================================================================${NC}"
+  echo -e "${CYAN}${BOLD} Configure Cloudflare Domain & SSL${NC}"
+  echo -e "${PURPLE}===================================================================${NC}"
+  echo -e "  ${CYAN}[1]${NC} ${BOLD}Nginx Reverse Proxy + Cloudflare DNS${NC} (Standard A Record + SSL + Real IP)"
+  echo -e "  ${CYAN}[2]${NC} ${BOLD}Cloudflare Zero Trust Tunnel${NC} (Zero open ports, connect via Tunnel Token)"
+  echo -e "  ${CYAN}[3]${NC} Back to Main Menu\n"
+  read -p "Select option [1-3]: " CF_CHOICE
+
+  case "$CF_CHOICE" in
+    1) configure_nginx_cloudflare ;;
+    2) configure_cloudflare_tunnel ;;
+    3) return 0 ;;
+    *) echo -e "${RED}Invalid choice!${NC}";;
+  esac
+}
+
+# ==============================================================================
+# PANEL & AGENT INSTALLERS
+# ==============================================================================
 
 # Install & Build Master Panel
 install_panel() {
@@ -207,9 +412,21 @@ SERVICEOF
   echo -e "${CYAN}Default Admin:${NC}    ${BOLD}admin@vpspanel.local${NC}"
   echo -e "${CYAN}Default Password:${NC} ${BOLD}admin123${NC}"
   echo -e "${PURPLE}-------------------------------------------------------------------${NC}"
-  echo -e "${YELLOW}Next Step: Log in to the Admin Dashboard and navigate to 'Nodes' to${NC}"
-  echo -e "${YELLOW}generate join tokens and connect worker nodes to this cluster!${NC}"
+  echo -e "${YELLOW}Next Step: Connect worker nodes via 'Nodes' in the dashboard!${NC}"
   echo -e "${GREEN}===================================================================${NC}\n"
+
+  # Optional Cloudflare prompt
+  if [ -n "$DOMAIN_NAME_CLI" ]; then
+    configure_nginx_cloudflare "$DOMAIN_NAME_CLI"
+  elif [ -n "$CF_TUNNEL_CLI" ]; then
+    configure_cloudflare_tunnel "$CF_TUNNEL_CLI"
+  else
+    echo -e "${CYAN}Would you like to configure your custom domain with Cloudflare now? [y/N]:${NC}"
+    read -r SETUP_CF
+    if [[ "$SETUP_CF" =~ ^[Yy]$ ]]; then
+      menu_cloudflare
+    fi
+  fi
 }
 
 # Install & Configure Worker Node Agent
@@ -219,7 +436,7 @@ install_agent() {
 
   # Prompt if parameters not passed
   if [ -z "$PANEL_URL" ]; then
-    echo -e "${CYAN}Enter Master Panel URL (e.g., http://1.2.3.4:4000):${NC}"
+    echo -e "${CYAN}Enter Master Panel URL (e.g., http://1.2.3.4:4000 or https://panel.yourdomain.com):${NC}"
     read -r PANEL_URL
   fi
 
@@ -356,7 +573,10 @@ AGENTSERVICEOF
   echo -e "${GREEN}===================================================================${NC}\n"
 }
 
-# Parse CLI arguments or show interactive menu
+# ==============================================================================
+# CLI ARGUMENT PARSER & INTERACTIVE MENU
+# ==============================================================================
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --panel)
@@ -380,15 +600,27 @@ while [[ $# -gt 0 ]]; do
       install_standalone
       exit 0
       ;;
+    --cloudflare|--domain)
+      detect_os
+      configure_nginx_cloudflare "$2"
+      exit 0
+      ;;
+    --cf-tunnel)
+      detect_os
+      configure_cloudflare_tunnel "$2"
+      exit 0
+      ;;
     -h|--help)
       echo "Usage: $0 [OPTIONS]"
       echo "Options:"
       echo "  --panel                        Install Master Panel (Controller + Web Admin Dashboard)"
       echo "  --agent                        Install Worker Node Agent (Daemon for virtualization)"
-      echo "    --panel-url <URL>            Master Panel URL (e.g., http://1.2.3.4:4000)"
+      echo "    --panel-url <URL>            Master Panel URL (e.g., http://1.2.3.4:4000 or https://domain.com)"
       echo "    --token <TOKEN>              Node Join Token from Master Panel"
       echo "    --driver <docker|kvm|mock>   Virtualization driver (default: docker)"
       echo "  --standalone                   Install both Master Panel and Local Node on this VPS"
+      echo "  --domain <yourdomain.com>      Configure Cloudflare Domain with Nginx Reverse Proxy & SSL"
+      echo "  --cf-tunnel <TOKEN>            Configure Cloudflare Zero Trust Tunnel"
       echo "  -h, --help                     Show this help message"
       exit 0
       ;;
@@ -399,17 +631,19 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Interactive Menu
-echo -e "${BOLD}Select Installation Option:${NC}\n"
+echo -e "${BOLD}Select Installation & Configuration Option:${NC}\n"
 echo -e "  ${CYAN}[1]${NC} ${BOLD}Master Panel${NC} (Controller API + Modern Web Admin Dashboard)"
 echo -e "  ${CYAN}[2]${NC} ${BOLD}Worker Node Agent${NC} (Connect this VPS to an existing Master Cluster)"
 echo -e "  ${CYAN}[3]${NC} ${BOLD}Full Standalone${NC} (Install Master Panel AND Local Worker on this VPS)"
-echo -e "  ${CYAN}[4]${NC} Exit\n"
-read -p "Enter selection [1-4]: " CHOICE
+echo -e "  ${CYAN}[4]${NC} ${BOLD}Configure Cloudflare Domain & SSL${NC} (Nginx Proxy + Real-IP or Cloudflare Tunnel)"
+echo -e "  ${CYAN}[5]${NC} Exit\n"
+read -p "Enter selection [1-5]: " CHOICE
 
 case "$CHOICE" in
   1) install_panel ;;
   2) install_agent ;;
   3) install_standalone ;;
-  4) echo "Installation cancelled."; exit 0 ;;
+  4) detect_os; menu_cloudflare ;;
+  5) echo "Cancelled."; exit 0 ;;
   *) echo -e "${RED}Invalid choice!${NC}"; exit 1 ;;
 esac

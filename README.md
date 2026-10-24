@@ -10,23 +10,49 @@ A modern, high-performance, multi-node VPS (Virtual Private Server) control pane
 
 ---
 
-## ⚡ Quick 1-Line Installation on Any VPS
+## ⚡ Unified 1-Line Installer (All Options & Cloudflare)
 
-You can install this panel on any clean Linux VPS (Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9):
+You can run the interactive master installer on any clean Linux VPS (Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9):
 
-### Option 1: Master Panel (Controller + Admin Dashboard)
+```bash
+curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash
+```
+
+The script presents a clean interactive menu:
+```
+Select Installation & Configuration Option:
+
+  [1] Master Panel (Controller API + Modern Web Admin Dashboard)
+  [2] Worker Node Agent (Connect this VPS to an existing Master Cluster)
+  [3] Full Standalone (Install Master Panel AND Local Worker on this VPS)
+  [4] Configure Cloudflare Domain & SSL (Nginx Proxy + Real-IP or Cloudflare Tunnel)
+  [5] Exit
+```
+
+### Direct Non-Interactive CLI Commands
+
+#### Option 1: Master Panel (Controller + Admin Dashboard)
 ```bash
 curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --panel
 ```
 
-### Option 2: Worker Node Agent (Connect an external VPS to Master)
+#### Option 2: Worker Node Agent (Connect external VPS to cluster)
 ```bash
 curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --agent --panel-url http://<PANEL_IP>:4000 --token <JOIN_TOKEN> --driver docker
 ```
 
-### Option 3: Full Standalone (Panel + Local Worker Node on 1 Server)
+#### Option 3: Full Standalone (Panel + Local Worker on 1 Server)
 ```bash
 curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --standalone
+```
+
+#### Option 4: Configure Cloudflare Custom Domain & SSL
+```bash
+# Via Nginx Reverse Proxy with Cloudflare Real-IP & SSL
+curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --domain panel.yourdomain.com
+
+# Or via Cloudflare Zero Trust Tunnel (zero open ports needed)
+curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --cf-tunnel <YOUR_TUNNEL_TOKEN>
 ```
 
 ---
