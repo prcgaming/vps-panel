@@ -3,6 +3,7 @@
 # VPS PANEL - Ultra-Fast 1-Click Installer (Pterodactyl-Style)
 # GitHub: https://github.com/prcgaming/vps-panel
 # Supports: Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/Rocky/Alma 8/9
+# Compatible with: Bare Metal, KVM, OpenVZ/LXC, Docker, WSL, Proxmox CT
 # ==============================================================================
 
 set -e
@@ -46,6 +47,20 @@ check_root() {
   fi
 }
 
+# Accurate check whether systemd is actually running as PID 1
+is_systemd() {
+  [ -d /run/systemd/system ] || return 1
+  local p1=$(ps -p 1 -o comm= 2>/dev/null || echo "")
+  if [ "$p1" != "systemd" ] && [ "$p1" != "init" ]; then
+    return 1
+  fi
+  # Make sure systemctl is not a container stub script
+  if systemctl is-system-running >/dev/null 2>&1 || [ "$(systemctl is-system-running 2>/dev/null)" = "degraded" ]; then
+    return 0
+  fi
+  return 1
+}
+
 detect_system() {
   if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -55,7 +70,12 @@ detect_system() {
     OS=$(uname -s | tr '[:upper:]' '[:lower:]')
     OS_VER=""
   fi
-  echo -e "${BLUE}[1/5] Detected Operating System:${NC} ${BOLD}$OS $OS_VER${NC}"
+
+  local init_system="systemd"
+  if ! is_systemd; then
+    init_system="container (service / PM2)"
+  fi
+  echo -e "${BLUE}[1/5] Detected System:${NC} ${BOLD}$OS $OS_VER${NC} [Init: ${BOLD}${init_system}${NC}]"
 }
 
 get_public_ip() {
@@ -71,10 +91,10 @@ setup_swap_if_needed() {
   if [ "$mem_mb" -lt 2000 ] && [ "$swap_mb" -lt 500 ]; then
     echo -e "${YELLOW}[*] Low RAM detected (${mem_mb}MB). Enabling 2GB SWAP to prevent OOM errors...${NC}"
     fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 2>/dev/null
-    chmod 600 /swapfile
-    mkswap /swapfile >/dev/null 2>&1
+    chmod 600 /swapfile 2>/dev/null || true
+    mkswap /swapfile >/dev/null 2>&1 || true
     swapon /swapfile >/dev/null 2>&1 || true
-    if ! grep -q "/swapfile" /etc/fstab 2>/dev/null; then
+    if [ -f /etc/fstab ] && ! grep -q "/swapfile" /etc/fstab 2>/dev/null; then
       echo '/swapfile none swap sw 0 0' >> /etc/fstab
     fi
     echo -e "${GREEN}[✓] 2GB Swap file activated.${NC}"
@@ -89,10 +109,10 @@ install_dependencies() {
   if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -y -q
-    apt-get install -y -q curl wget tar gzip build-essential ufw net-tools openssl
+    apt-get install -y -q curl wget tar gzip build-essential ufw net-tools openssl procps
   elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
     yum install -y epel-release || true
-    yum install -y curl wget tar gzip make gcc gcc-c++ firewalld net-tools openssl
+    yum install -y curl wget tar gzip make gcc gcc-c++ firewalld net-tools openssl procps
   fi
 
   # Check or Install Node.js 22 LTS (Active LTS with built-in SQLite engine)
@@ -169,6 +189,23 @@ download_panel_files() {
 }
 
 # ------------------------------------------------------------------------------
+# Start / Reload Nginx (Compatible with systemd and non-systemd containers)
+# ------------------------------------------------------------------------------
+start_or_reload_nginx() {
+  nginx -t 2>/dev/null || {
+    echo -e "${RED}[ERROR] Nginx configuration test failed:${NC}"
+    nginx -t
+    return 1
+  }
+
+  if is_systemd; then
+    systemctl restart nginx 2>/dev/null || systemctl reload nginx 2>/dev/null || true
+  else
+    service nginx restart 2>/dev/null || service nginx start 2>/dev/null || nginx -s reload 2>/dev/null || nginx 2>/dev/null || true
+  fi
+}
+
+# ------------------------------------------------------------------------------
 # Configure Nginx & Cloudflare SSL (Port 80 + 443 with Origin TLS)
 # ------------------------------------------------------------------------------
 setup_nginx_domain() {
@@ -181,7 +218,6 @@ setup_nginx_domain() {
     apt-get install -y -q nginx certbot python3-certbot-nginx
   elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
     yum install -y nginx certbot python3-certbot-nginx
-    systemctl enable nginx
   fi
 
   # 1. Cloudflare Real IP restoration
@@ -284,10 +320,9 @@ VHOSTEOF
     ln -sf "$VHOST" "/etc/nginx/sites-enabled/${DOMAIN}.conf"
   fi
 
-  nginx -t
-  systemctl restart nginx
+  start_or_reload_nginx
 
-  # Open HTTP/HTTPS Ports in Firewall
+  # Open HTTP/HTTPS Ports in Firewall (if firewall is installed)
   if command -v ufw >/dev/null 2>&1; then
     ufw allow 80/tcp >/dev/null 2>&1 || true
     ufw allow 443/tcp >/dev/null 2>&1 || true
@@ -298,13 +333,118 @@ VHOSTEOF
   fi
 
   # Attempt Certbot Let's Encrypt (optional, fallback stays active if CF proxy blocks ACME)
-  echo -e "\n${YELLOW}[*] Validating Let's Encrypt SSL certificate...${NC}"
+  echo -e "\n${YELLOW}[*] Validating SSL certificate...${NC}"
   certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect 2>/dev/null || {
-    echo -e "${YELLOW}[NOTE] Cloudflare Proxy is protecting your VPS. Origin TLS is active on port 443.${NC}"
+    echo -e "${YELLOW}[NOTE] Cloudflare Proxy is active. Origin TLS certificate is active on port 443.${NC}"
   }
 
-  systemctl reload nginx 2>/dev/null || systemctl restart nginx
+  start_or_reload_nginx
   echo -e "${GREEN}[✓] Nginx configured with SSL on Ports 80 & 443 for ${DOMAIN}.${NC}"
+}
+
+# ------------------------------------------------------------------------------
+# Start VPS Panel Master Service (Systemd or PM2/SysV init)
+# ------------------------------------------------------------------------------
+start_vps_panel_service() {
+  if is_systemd; then
+    cat > /etc/systemd/system/vps-panel.service << SERVICEOF
+[Unit]
+Description=VPS Control Panel Master Controller
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$INSTALL_DIR/apps/server
+EnvironmentFile=$INSTALL_DIR/apps/server/.env
+ExecStart=/usr/bin/env node dist/index.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+SERVICEOF
+
+    systemctl daemon-reload
+    systemctl enable vps-panel
+    systemctl restart vps-panel
+  else
+    echo -e "${YELLOW}[*] Container / non-systemd environment detected. Setting up PM2 & SysV service...${NC}"
+
+    # Install PM2 if not present
+    if ! command -v pm2 >/dev/null 2>&1; then
+      echo -e "${YELLOW}[*] Installing PM2 process manager...${NC}"
+      npm install -g pm2 --silent 2>/dev/null || npm install -g pm2 || true
+    fi
+
+    # Create SysV init script for service vps-panel commands
+    cat > /etc/init.d/vps-panel << 'INITEOF'
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          vps-panel
+# Required-Start:    $network $local_fs
+# Required-Stop:     $network $local_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: VPS Control Panel
+### END INIT INFO
+
+DIR="/opt/vps-panel/apps/server"
+
+case "$1" in
+  start)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 start "$DIR/dist/index.js" --name vps-panel --cwd "$DIR"
+    else
+      cd "$DIR" && nohup node dist/index.js > /var/log/vps-panel.log 2>&1 &
+    fi
+    ;;
+  stop)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 stop vps-panel
+    else
+      pkill -f "node dist/index.js" 2>/dev/null || true
+    fi
+    ;;
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+  status)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 status vps-panel
+    else
+      pgrep -f "node dist/index.js" >/dev/null && echo "vps-panel is running" || echo "vps-panel is stopped"
+    fi
+    ;;
+  logs)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 logs vps-panel
+    else
+      tail -f /var/log/vps-panel.log
+    fi
+    ;;
+  *)
+    echo "Usage: service vps-panel {start|stop|restart|status|logs}"
+    exit 1
+    ;;
+esac
+exit 0
+INITEOF
+    chmod +x /etc/init.d/vps-panel
+
+    # Start service via PM2 or fallback
+    cd "$INSTALL_DIR/apps/server"
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 delete vps-panel >/dev/null 2>&1 || true
+      pm2 start dist/index.js --name vps-panel --cwd "$INSTALL_DIR/apps/server"
+      pm2 save >/dev/null 2>&1 || true
+    else
+      pkill -f "node dist/index.js" 2>/dev/null || true
+      nohup node dist/index.js > /var/log/vps-panel.log 2>&1 &
+    fi
+  fi
 }
 
 # ------------------------------------------------------------------------------
@@ -365,28 +505,8 @@ ENVEOF
     });
   " 2>/dev/null || true
 
-  # Configure Systemd Service
-  cat > /etc/systemd/system/vps-panel.service << SERVICEOF
-[Unit]
-Description=VPS Control Panel Master Controller
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=$INSTALL_DIR/apps/server
-EnvironmentFile=$INSTALL_DIR/apps/server/.env
-ExecStart=/usr/bin/env node dist/index.js
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-SERVICEOF
-
-  systemctl daemon-reload
-  systemctl enable vps-panel
-  systemctl restart vps-panel
+  # Start Service (Systemd or PM2/SysV)
+  start_vps_panel_service
 
   # Open Panel Port in Firewall
   if command -v ufw >/dev/null 2>&1; then
@@ -415,7 +535,13 @@ SERVICEOF
   else
     echo -e "${RED}[WARNING] VPS Panel backend did not respond within 12 seconds.${NC}"
     echo -e "${YELLOW}Inspecting service error logs:${NC}"
-    journalctl -u vps-panel -n 25 --no-pager || true
+    if is_systemd; then
+      journalctl -u vps-panel -n 25 --no-pager || true
+    elif command -v pm2 >/dev/null 2>&1; then
+      pm2 logs vps-panel --lines 25 --nostream || true
+    else
+      tail -n 25 /var/log/vps-panel.log 2>/dev/null || true
+    fi
   fi
 
   # Configure Domain if provided
@@ -433,8 +559,13 @@ SERVICEOF
   echo -e "  ${CYAN}Panel Access URL:${NC}    ${BOLD}${FINAL_URL}${NC}"
   echo -e "  ${CYAN}Admin Email:${NC}         ${BOLD}${ADMIN_EMAIL}${NC}"
   echo -e "  ${CYAN}Admin Password:${NC}      ${BOLD}${ADMIN_PASSWORD}${NC}"
-  echo -e "  ${CYAN}Service Status:${NC}      ${BOLD}systemctl status vps-panel${NC}"
-  echo -e "  ${CYAN}Realtime Logs:${NC}       ${BOLD}journalctl -u vps-panel -f${NC}"
+  if is_systemd; then
+    echo -e "  ${CYAN}Service Status:${NC}      ${BOLD}systemctl status vps-panel${NC}"
+    echo -e "  ${CYAN}Realtime Logs:${NC}       ${BOLD}journalctl -u vps-panel -f${NC}"
+  else
+    echo -e "  ${CYAN}Service Status:${NC}      ${BOLD}service vps-panel status${NC} (or ${BOLD}pm2 status${NC})"
+    echo -e "  ${CYAN}Realtime Logs:${NC}       ${BOLD}service vps-panel logs${NC} (or ${BOLD}pm2 logs${NC})"
+  fi
   echo -e "${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}\n"
 }
 
@@ -458,9 +589,13 @@ install_node_daemon() {
 
   if [ "$DRIVER" = "docker" ] && ! command -v docker >/dev/null 2>&1; then
     echo -e "${YELLOW}[*] Installing Docker Engine...${NC}"
-    curl -fsSL https://get.docker.com | sh
-    systemctl enable docker
-    systemctl start docker
+    curl -fsSL https://get.docker.com | sh 2>/dev/null || true
+    if is_systemd; then
+      systemctl enable docker 2>/dev/null || true
+      systemctl start docker 2>/dev/null || true
+    else
+      service docker start 2>/dev/null || true
+    fi
   fi
 
   download_panel_files
@@ -477,7 +612,8 @@ DRIVER=$DRIVER
 PORT=$NODE_PORT
 AGENTENV
 
-  cat > /etc/systemd/system/vps-agent.service << AGENTSERVICEOF
+  if is_systemd; then
+    cat > /etc/systemd/system/vps-agent.service << AGENTSERVICEOF
 [Unit]
 Description=VPS Worker Node Hypervisor Agent
 After=network.target docker.service
@@ -495,9 +631,49 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 AGENTSERVICEOF
 
-  systemctl daemon-reload
-  systemctl enable vps-agent
-  systemctl restart vps-agent
+    systemctl daemon-reload
+    systemctl enable vps-agent
+    systemctl restart vps-agent
+  else
+    cat > /etc/init.d/vps-agent << 'AGENTINITEOF'
+#!/bin/sh
+DIR="/opt/vps-panel/apps/agent"
+case "$1" in
+  start)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 start "$DIR/dist/index.js" --name vps-agent --cwd "$DIR"
+    else
+      cd "$DIR" && nohup node dist/index.js > /var/log/vps-agent.log 2>&1 &
+    fi
+    ;;
+  stop)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 stop vps-agent
+    else
+      pkill -f "node dist/index.js" 2>/dev/null || true
+    fi
+    ;;
+  restart)
+    $0 stop; sleep 1; $0 start ;;
+  status)
+    if command -v pm2 >/dev/null 2>&1; then pm2 status vps-agent; else pgrep -f "node dist/index.js" >/dev/null && echo "running" || echo "stopped"; fi ;;
+  logs)
+    if command -v pm2 >/dev/null 2>&1; then pm2 logs vps-agent; else tail -f /var/log/vps-agent.log; fi ;;
+  *)
+    echo "Usage: service vps-agent {start|stop|restart|status|logs}"; exit 1 ;;
+esac
+exit 0
+AGENTINITEOF
+    chmod +x /etc/init.d/vps-agent
+    cd "$INSTALL_DIR/apps/agent"
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 delete vps-agent >/dev/null 2>&1 || true
+      pm2 start dist/index.js --name vps-agent --cwd "$INSTALL_DIR/apps/agent"
+      pm2 save >/dev/null 2>&1 || true
+    else
+      nohup node dist/index.js > /var/log/vps-agent.log 2>&1 &
+    fi
+  fi
 
   echo -e "\n${GREEN}[✓] Worker Node Agent connected to ${MASTER_URL_INPUT} (Driver: ${DRIVER})!${NC}\n"
 }
@@ -510,9 +686,13 @@ install_standalone() {
 
   echo -e "\n${YELLOW}[*] Setting up Local Worker Node Daemon...${NC}"
   if ! command -v docker >/dev/null 2>&1; then
-    curl -fsSL https://get.docker.com | sh
-    systemctl enable docker
-    systemctl start docker
+    curl -fsSL https://get.docker.com | sh 2>/dev/null || true
+  fi
+  if is_systemd; then
+    systemctl enable docker 2>/dev/null || true
+    systemctl start docker 2>/dev/null || true
+  else
+    service docker start 2>/dev/null || true
   fi
 
   LOCAL_TOKEN="local-node-$(openssl rand -hex 12 2>/dev/null || echo 'master-token-123')"
@@ -539,7 +719,8 @@ DRIVER=docker
 PORT=$NODE_PORT
 AGENTENV
 
-  cat > /etc/systemd/system/vps-agent.service << AGENTSERVICEOF
+  if is_systemd; then
+    cat > /etc/systemd/system/vps-agent.service << AGENTSERVICEOF
 [Unit]
 Description=VPS Worker Node Hypervisor Agent
 After=network.target vps-panel.service docker.service
@@ -557,9 +738,49 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 AGENTSERVICEOF
 
-  systemctl daemon-reload
-  systemctl enable vps-agent
-  systemctl restart vps-agent
+    systemctl daemon-reload
+    systemctl enable vps-agent
+    systemctl restart vps-agent
+  else
+    cat > /etc/init.d/vps-agent << 'AGENTINITEOF'
+#!/bin/sh
+DIR="/opt/vps-panel/apps/agent"
+case "$1" in
+  start)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 start "$DIR/dist/index.js" --name vps-agent --cwd "$DIR"
+    else
+      cd "$DIR" && nohup node dist/index.js > /var/log/vps-agent.log 2>&1 &
+    fi
+    ;;
+  stop)
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 stop vps-agent
+    else
+      pkill -f "node dist/index.js" 2>/dev/null || true
+    fi
+    ;;
+  restart)
+    $0 stop; sleep 1; $0 start ;;
+  status)
+    if command -v pm2 >/dev/null 2>&1; then pm2 status vps-agent; else pgrep -f "node dist/index.js" >/dev/null && echo "running" || echo "stopped"; fi ;;
+  logs)
+    if command -v pm2 >/dev/null 2>&1; then pm2 logs vps-agent; else tail -f /var/log/vps-agent.log; fi ;;
+  *)
+    echo "Usage: service vps-agent {start|stop|restart|status|logs}"; exit 1 ;;
+esac
+exit 0
+AGENTINITEOF
+    chmod +x /etc/init.d/vps-agent
+    cd "$INSTALL_DIR/apps/agent"
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 delete vps-agent >/dev/null 2>&1 || true
+      pm2 start dist/index.js --name vps-agent --cwd "$INSTALL_DIR/apps/agent"
+      pm2 save >/dev/null 2>&1 || true
+    else
+      nohup node dist/index.js > /var/log/vps-agent.log 2>&1 &
+    fi
+  fi
 
   echo -e "${GREEN}[✓] Standalone Setup Complete: Panel & Local Hypervisor Node are live!${NC}\n"
 }
