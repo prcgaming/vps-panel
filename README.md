@@ -12,25 +12,45 @@ A modern, high-performance, multi-node VPS (Virtual Private Server) control pane
 
 ## ⚡ Quick 1-Command Installation (Pterodactyl-Style)
 
-Run this single command on any clean Linux VPS (Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9):
+Run this single command on your Linux VPS (Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9):
 
 ```bash
 bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh)
 ```
-*(Or via pipe: `curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash`)*
 
-The script immediately launches an interactive wizard:
+### ⚡ Express 1-Command Install with Domain (Zero Prompts)
+
+If you already have your domain pointed to your VPS (e.g. via Cloudflare DNS or Tunnel):
+
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) vps.lunars.indevs.in
 ```
-===================================================================
-      VPS PANEL - Multi-Node Management & Cloud Orchestrator
-===================================================================
-Select Installation & Configuration Option:
 
-  [1] Master Panel (Controller API + Modern Web Admin Dashboard)
-  [2] Worker Node Agent (Connect this VPS to an existing Master Cluster)
-  [3] Full Standalone (Install Master Panel AND Local Worker on this VPS)
-  [4] Configure Cloudflare Domain & SSL (Nginx Proxy + Real-IP or Cloudflare Tunnel)
-  [5] Exit
+This single command:
+1. Detects your OS and automatically creates a 2GB swap file on low-RAM VPS.
+2. Automatically installs or upgrades to **Node.js 22 LTS**.
+3. Downloads and extracts the pre-built panel files directly.
+4. Initializes the SQLite database and seeds default admin credentials.
+5. Configures systemd background service `vps-panel.service`.
+6. Sets up Nginx reverse proxy with Cloudflare Real-IP restoration and SSL on both Port 80 and Port 443.
+7. Performs an automated health check on `http://127.0.0.1:4000/api/health` before completing.
+
+---
+
+### Interactive Menu Options
+
+```
+* ------------------------------------------------------------------------- *
+*             VPS PANEL - Cloud & Virtualization Orchestrator               *
+*                 Fast 1-Click Pterodactyl-Style Installer                  *
+* ------------------------------------------------------------------------- *
+Select what you would like to install:
+
+  [0] Install Master Panel (Controller API + Modern Web Dashboard)
+  [1] Install Worker Node Daemon (Hypervisor agent for Docker/KVM)
+  [2] Install Standalone [Both 0 and 1] (Panel + Local Hypervisor on this VPS)
+  [3] Configure Cloudflare Domain & Nginx SSL
+  [4] Exit
 ```
 
 ### Direct Non-Interactive CLI Commands
