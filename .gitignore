@@ -8,6 +8,10 @@ yarn-error.log*
 dist/
 build/
 .cache/
+!apps/client/dist/
+!apps/client/dist/**
+!apps/server/dist/
+!apps/server/dist/**
 
 # Environment files
 .env
