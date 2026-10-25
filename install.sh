@@ -270,6 +270,20 @@ NGINXEOF
 configure_cloudflare_tunnel() {
   local TUNNEL_TOKEN="$1"
 
+  # Check if cloudflared is already installed and running
+  if command -v cloudflared >/dev/null 2>&1; then
+    echo -e "\n${GREEN}[OK] cloudflared is already installed on this VPS!${NC}"
+    echo -e "${YELLOW}If your tunnel is already running, you do NOT need to re-install.${NC}"
+    echo -e "${CYAN}Simply add a Public Hostname in Cloudflare Zero Trust:${NC}"
+    echo -e "  Service Type: ${BOLD}HTTP${NC}"
+    echo -e "  URL:          ${BOLD}localhost:${PANEL_PORT}${NC}\n"
+    read -r -p "Do you want to re-install/re-link with a new tunnel token? [y/N]: " REINSTALL_CF
+    if [[ ! "$REINSTALL_CF" =~ ^[Yy]$ ]]; then
+      echo -e "${GREEN}[OK] Keeping existing tunnel intact.${NC}"
+      return 0
+    fi
+  fi
+
   if [ -z "$TUNNEL_TOKEN" ]; then
     echo -e "\n${CYAN}To set up a Cloudflare Tunnel:${NC}"
     echo -e "1. Go to Cloudflare Zero Trust Dashboard -> Networks -> Tunnels"
@@ -438,13 +452,23 @@ SERVICEOF
   echo -e "${YELLOW}Next Step: Connect worker nodes via 'Nodes' in the dashboard!${NC}"
   echo -e "${GREEN}===================================================================${NC}\n"
 
+  # Check if cloudflared is already installed on this machine
+  if command -v cloudflared >/dev/null 2>&1 || systemctl is-active --quiet cloudflared 2>/dev/null; then
+    echo -e "${GREEN}[OK] Existing Cloudflare Tunnel detected on this VPS!${NC}"
+    echo -e "${CYAN}To connect your domain via your existing tunnel:${NC}"
+    echo -e "  1. Open Cloudflare Zero Trust Dashboard -> ${BOLD}Networks -> Tunnels${NC}"
+    echo -e "  2. Click your active tunnel -> ${BOLD}Configure -> Public Hostnames -> Add a public hostname${NC}"
+    echo -e "  3. Service: ${BOLD}HTTP${NC}  |  URL: ${BOLD}localhost:${PANEL_PORT}${NC}"
+    echo -e "  4. Save! Your domain will immediately load the panel with SSL & WebSockets.\n"
+  fi
+
   # Optional Cloudflare prompt
   if [ -n "$DOMAIN_NAME_CLI" ]; then
     configure_nginx_cloudflare "$DOMAIN_NAME_CLI"
   elif [ -n "$CF_TUNNEL_CLI" ]; then
     configure_cloudflare_tunnel "$CF_TUNNEL_CLI"
   else
-    echo -e "${CYAN}Would you like to configure your custom domain with Cloudflare now? [y/N]:${NC}"
+    echo -e "${CYAN}Would you like to configure a new Cloudflare Domain / Nginx SSL now? [y/N]:${NC}"
     read -r SETUP_CF
     if [[ "$SETUP_CF" =~ ^[Yy]$ ]]; then
       menu_cloudflare
