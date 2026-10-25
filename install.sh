@@ -167,7 +167,8 @@ configure_nginx_cloudflare() {
 
   # Create Cloudflare Real IP restoration config
   echo -e "${YELLOW}--> Configuring Cloudflare Real IP restoration in Nginx...${NC}"
-  cat > /etc/nginx/conf.d/cloudflare_real_ip.conf 2>/dev/null || cat > /etc/nginx/cloudflare_real_ip.conf << 'CFOVERLAY'
+  mkdir -p /etc/nginx/conf.d
+  cat > /etc/nginx/conf.d/cloudflare_real_ip.conf << 'CFOVERLAY'
 # Cloudflare Official IPv4 CIDR Blocks
 set_real_ip_from 173.245.48.0/20;
 set_real_ip_from 103.21.244.0/22;
@@ -230,6 +231,7 @@ server {
 NGINXEOF
 
   if [ -d "/etc/nginx/sites-enabled" ]; then
+    rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
     ln -sf "$VHOST_CONF" "/etc/nginx/sites-enabled/${DOMAIN_NAME}.conf"
   fi
 
