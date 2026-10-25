@@ -35,7 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreat
         setNodes(nodesRes.nodes || []);
       })
       .catch(console.error)
-      .finally(() => setLoadingData(false));
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {

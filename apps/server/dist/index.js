@@ -44,10 +44,26 @@ if (fs.existsSync(config.clientDistPath)) {
         res.sendFile(path.resolve(config.clientDistPath, 'index.html'));
     });
 }
+// Process safety handlers
+process.on('uncaughtException', (err) => {
+    console.error('[Server ERROR] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Server ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+});
 // 5. Create HTTP & WebSocket Server
 const server = http.createServer(app);
 server.on('upgrade', (req, socket, head) => {
     wsHub.handleUpgrade(req, socket, head);
+});
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`[Server FATAL] Port ${config.port} is already in use by another process!`);
+    }
+    else {
+        console.error('[Server FATAL] Server failed to start:', err);
+    }
+    process.exit(1);
 });
 server.listen(config.port, config.host, () => {
     console.log(`=======================================================`);

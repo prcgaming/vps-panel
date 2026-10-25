@@ -1,7 +1,21 @@
-import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import path from 'path';
 import { config } from '../config.js';
+
+let DatabaseSyncClass: any;
+try {
+  const sqlite = await import('node:sqlite');
+  DatabaseSyncClass = sqlite.DatabaseSync;
+} catch (err) {
+  console.error('================================================================');
+  console.error('[CRITICAL] Node.js built-in SQLite engine is not available!');
+  console.error(`Current Node.js version: ${process.version}`);
+  console.error('VPS Panel requires Node.js >= 22.5.0 LTS.');
+  console.error('Please upgrade Node.js via:');
+  console.error('  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs');
+  console.error('================================================================');
+  process.exit(1);
+}
 
 // Ensure data folder exists
 const dir = path.dirname(config.dbPath);
@@ -9,7 +23,7 @@ if (!fs.existsSync(dir)) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-export const db = new DatabaseSync(config.dbPath);
+export const db = new DatabaseSyncClass(config.dbPath);
 
 // Enable WAL mode and foreign keys for high performance and integrity
 db.exec(`

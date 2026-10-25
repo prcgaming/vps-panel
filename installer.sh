@@ -59,30 +59,35 @@ detect_system() {
 }
 
 get_public_ip() {
-  curl -s https://api.ipify.org || curl -s https://ifconfig.me || hostname -I | awk '{print $1}'
+  local ip=""
+  ip=$(curl -s -m 5 https://api.ipify.org 2>/dev/null || curl -s -m 5 https://ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+  echo "${ip:-127.0.0.1}"
 }
 
 # Auto-create 2GB Swap file on low memory VPS (< 2GB RAM)
 setup_swap_if_needed() {
-  local mem_mb=$(free -m | awk '/^Mem:/{print $2}')
-  local swap_mb=$(free -m | awk '/^Swap:/{print $2}')
+  local mem_mb=$(free -m 2>/dev/null | awk '/^Mem:/{print $2}' || echo "4096")
+  local swap_mb=$(free -m 2>/dev/null | awk '/^Swap:/{print $2}' || echo "2048")
   if [ "$mem_mb" -lt 2000 ] && [ "$swap_mb" -lt 500 ]; then
-    echo -e "${YELLOW}[*] Low RAM detected (${mem_mb}MB). Enabling 2GB SWAP to prevent memory issues...${NC}"
+    echo -e "${YELLOW}[*] Low RAM detected (${mem_mb}MB). Enabling 2GB SWAP to prevent OOM errors...${NC}"
     fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 2>/dev/null
     chmod 600 /swapfile
     mkswap /swapfile >/dev/null 2>&1
     swapon /swapfile >/dev/null 2>&1 || true
-    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    if ! grep -q "/swapfile" /etc/fstab 2>/dev/null; then
+      echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    fi
     echo -e "${GREEN}[✓] 2GB Swap file activated.${NC}"
   fi
 }
 
 # ------------------------------------------------------------------------------
-# Install Prerequisites
+# Install Prerequisites & Node.js 22 LTS
 # ------------------------------------------------------------------------------
 install_dependencies() {
   echo -e "\n${YELLOW}[2/5] Updating system packages & installing dependencies...${NC}"
   if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+    export DEBIAN_FRONTEND=noninteractive
     apt-get update -y -q
     apt-get install -y -q curl wget tar gzip build-essential ufw net-tools openssl
   elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
@@ -90,16 +95,32 @@ install_dependencies() {
     yum install -y curl wget tar gzip make gcc gcc-c++ firewalld net-tools openssl
   fi
 
-  # Check or Install Node.js 22 LTS
-  if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -d'.' -f1 | tr -d 'v')" -lt 20 ]; then
-    echo -e "${YELLOW}[*] Installing Node.js 22 LTS...${NC}"
+  # Check or Install Node.js 22 LTS (Active LTS with built-in SQLite engine)
+  local node_major=0
+  if command -v node >/dev/null 2>&1; then
+    node_major=$(node -v | tr -d 'v' | cut -d'.' -f1)
+  fi
+
+  if [ "$node_major" -lt 22 ]; then
+    echo -e "${YELLOW}[*] Upgrading Node.js to v22 LTS (Active LTS)...${NC}"
     if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+      # Remove any outdated OS-level node packages that prevent upgrading
+      apt-get remove -y -q nodejs npm nodejs-doc libnode-dev 2>/dev/null || true
       curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+      apt-get update -y -q
       apt-get install -y -q nodejs
     elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
       curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
+      yum remove -y nodejs npm 2>/dev/null || true
       yum install -y nodejs
     fi
+  fi
+
+  node_major=$(node -v 2>/dev/null | tr -d 'v' | cut -d'.' -f1 || echo "0")
+  if [ "$node_major" -lt 22 ]; then
+    echo -e "${RED}[ERROR] Node.js 22 LTS is required for SQLite, but found: $(node -v).${NC}"
+    echo -e "${YELLOW}Please install Node.js 22 manually: curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs${NC}"
+    exit 1
   fi
 
   echo -e "${GREEN}[✓] Node.js version:${NC} $(node -v) / npm $(npm -v)"
@@ -111,9 +132,25 @@ install_dependencies() {
 download_panel_files() {
   echo -e "\n${YELLOW}[3/5] Downloading pre-built VPS Panel release...${NC}"
   mkdir -p "$INSTALL_DIR"
-  
+
+  # Backup existing database if present
+  if [ -d "$INSTALL_DIR/apps/server/data" ]; then
+    mkdir -p /tmp/vps_panel_db_backup
+    cp -r "$INSTALL_DIR/apps/server/data/"* /tmp/vps_panel_db_backup/ 2>/dev/null || true
+  fi
+
   # Download and extract the archive directly
-  curl -sSL "$ARCHIVE_URL" | tar -xz --strip-components=1 -C "$INSTALL_DIR"
+  local download_ok=0
+  if curl -sSL "$ARCHIVE_URL" | tar -xz --strip-components=1 -C "$INSTALL_DIR" 2>/dev/null; then
+    download_ok=1
+  else
+    echo -e "${YELLOW}[*] Retrying download via temporary file...${NC}"
+    curl -sSL -o /tmp/vps-panel.tar.gz "$ARCHIVE_URL"
+    if tar -xzf /tmp/vps-panel.tar.gz --strip-components=1 -C "$INSTALL_DIR" 2>/dev/null; then
+      download_ok=1
+    fi
+    rm -f /tmp/vps-panel.tar.gz
+  fi
 
   if [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
     echo -e "${RED}[ERROR] Download failed. Falling back to git clone...${NC}"
@@ -121,17 +158,25 @@ download_panel_files() {
     git clone "https://github.com/prcgaming/vps-panel.git" "$INSTALL_DIR"
   fi
 
+  # Restore database backup if present
+  if [ -d "/tmp/vps_panel_db_backup" ]; then
+    mkdir -p "$INSTALL_DIR/apps/server/data"
+    cp -r /tmp/vps_panel_db_backup/* "$INSTALL_DIR/apps/server/data/" 2>/dev/null || true
+    rm -rf /tmp/vps_panel_db_backup
+  fi
+
   echo -e "${GREEN}[✓] VPS Panel files unpacked successfully into ${INSTALL_DIR}${NC}"
 }
 
 # ------------------------------------------------------------------------------
-# Configure Nginx & Cloudflare SSL
+# Configure Nginx & Cloudflare SSL (Port 80 + 443 with Origin TLS)
 # ------------------------------------------------------------------------------
 setup_nginx_domain() {
   local DOMAIN="$1"
 
-  echo -e "\n${YELLOW}[5/5] Configuring Nginx Reverse Proxy with Cloudflare SSL for ${BOLD}${DOMAIN}${NC}..."
+  echo -e "\n${YELLOW}[*] Configuring Nginx Reverse Proxy with Cloudflare SSL for ${BOLD}${DOMAIN}${NC}..."
   if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+    export DEBIAN_FRONTEND=noninteractive
     apt-get update -y -q
     apt-get install -y -q nginx certbot python3-certbot-nginx
   elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
@@ -167,7 +212,17 @@ set_real_ip_from 2c0f:f248::/32;
 real_ip_header CF-Connecting-IP;
 CFIP
 
-  # 2. VirtualHost Configuration
+  # 2. Generate origin TLS certificate for port 443 (Ready for Cloudflare Full SSL)
+  mkdir -p /etc/ssl/vps-panel
+  if [ ! -f /etc/ssl/vps-panel/cert.pem ] || [ ! -f /etc/ssl/vps-panel/key.pem ]; then
+    echo -e "${YELLOW}[*] Generating origin TLS certificate for HTTPS...${NC}"
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+      -keyout /etc/ssl/vps-panel/key.pem \
+      -out /etc/ssl/vps-panel/cert.pem \
+      -subj "/CN=${DOMAIN}" >/dev/null 2>&1
+  fi
+
+  # 3. VirtualHost Configuration (Listens on both 80 and 443)
   local VHOST="/etc/nginx/conf.d/${DOMAIN}.conf"
   if [ -d "/etc/nginx/sites-available" ]; then
     VHOST="/etc/nginx/sites-available/${DOMAIN}.conf"
@@ -195,6 +250,33 @@ server {
         proxy_send_timeout 86400s;
     }
 }
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name $DOMAIN;
+
+    ssl_certificate /etc/ssl/vps-panel/cert.pem;
+    ssl_certificate_key /etc/ssl/vps-panel/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    client_max_body_size 500M;
+
+    location / {
+        proxy_pass http://127.0.0.1:$PANEL_PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}
 VHOSTEOF
 
   if [ -d "/etc/nginx/sites-enabled" ]; then
@@ -215,14 +297,14 @@ VHOSTEOF
     firewall-cmd --reload >/dev/null 2>&1 || true
   fi
 
-  # Certbot SSL
-  echo -e "\n${YELLOW}[*] Obtaining SSL certificate for ${DOMAIN}...${NC}"
+  # Attempt Certbot Let's Encrypt (optional, fallback stays active if CF proxy blocks ACME)
+  echo -e "\n${YELLOW}[*] Validating Let's Encrypt SSL certificate...${NC}"
   certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect 2>/dev/null || {
-    echo -e "${YELLOW}[NOTE] Certbot skipped. If using Cloudflare Orange Cloud Proxy, your SSL is active via Cloudflare Edge!${NC}"
+    echo -e "${YELLOW}[NOTE] Cloudflare Proxy is protecting your VPS. Origin TLS is active on port 443.${NC}"
   }
 
-  systemctl reload nginx
-  echo -e "${GREEN}[✓] Nginx configured with SSL for ${DOMAIN}.${NC}"
+  systemctl reload nginx 2>/dev/null || systemctl restart nginx
+  echo -e "${GREEN}[✓] Nginx configured with SSL on Ports 80 & 443 for ${DOMAIN}.${NC}"
 }
 
 # ------------------------------------------------------------------------------
@@ -234,9 +316,9 @@ install_panel() {
   detect_system
   setup_swap_if_needed
 
-  # Non-interactive / Express detection
+  # Interactive prompts if not passed as CLI args
   if [ -z "$PANEL_DOMAIN" ] && [ -t 0 ]; then
-    echo -e "${CYAN}${BOLD}[+] Quick Setup Questions (Press Enter to use defaults):${NC}\n"
+    echo -e "${CYAN}${BOLD}[+] Quick Setup Configuration:${NC}\n"
     read -r -p "Enter Domain for Panel (e.g. vps.lunars.indevs.in) [press Enter for Server IP]: " FQDN_INPUT
     PANEL_DOMAIN=${FQDN_INPUT:-""}
 
@@ -259,10 +341,10 @@ install_panel() {
 
   echo -e "\n${YELLOW}[4/5] Setting up Master Panel server & SQLite database...${NC}"
   cd "$INSTALL_DIR/apps/server"
-  npm install --omit=dev --silent 2>/dev/null || npm install
+  npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
 
   # Configure Environment Variables
-  JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
+  JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | tr -dc A-Za-z0-9)
   cat > .env << ENVEOF
 PORT=$PANEL_PORT
 HOST=0.0.0.0
@@ -278,12 +360,12 @@ ENVEOF
 
   # Seed Database with administrator credentials
   ADMIN_EMAIL="$ADMIN_EMAIL" ADMIN_PASSWORD="$ADMIN_PASSWORD" node -e "
-    const { seedDatabase } = require('./dist/db/seed.js');
-    seedDatabase();
-  " 2>/dev/null || npm run seed 2>/dev/null || true
+    import('./dist/db/seed.js').then(m => m.seedDatabase()).catch(err => {
+      console.error('[Seed Error]', err);
+    });
+  " 2>/dev/null || true
 
   # Configure Systemd Service
-  NODE_BIN=$(which node || echo "/usr/bin/node")
   cat > /etc/systemd/system/vps-panel.service << SERVICEOF
 [Unit]
 Description=VPS Control Panel Master Controller
@@ -293,10 +375,10 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR/apps/server
-ExecStart=$NODE_BIN dist/index.js
+EnvironmentFile=$INSTALL_DIR/apps/server/.env
+ExecStart=/usr/bin/env node dist/index.js
 Restart=always
-RestartSec=5
-Environment=NODE_ENV=production
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
@@ -306,12 +388,34 @@ SERVICEOF
   systemctl enable vps-panel
   systemctl restart vps-panel
 
-  # Open Firewall
+  # Open Panel Port in Firewall
   if command -v ufw >/dev/null 2>&1; then
     ufw allow $PANEL_PORT/tcp >/dev/null 2>&1 || true
   elif command -v firewall-cmd >/dev/null 2>&1; then
     firewall-cmd --permanent --add-port=$PANEL_PORT/tcp >/dev/null 2>&1 || true
     firewall-cmd --reload >/dev/null 2>&1 || true
+  fi
+
+  # Health Check: Wait for port 4000 to be online
+  echo -e "\n${YELLOW}[*] Verifying VPS Panel backend health...${NC}"
+  local attempts=0
+  local max_attempts=12
+  local is_healthy=0
+  while [ $attempts -lt $max_attempts ]; do
+    if curl -s -f "http://127.0.0.1:${PANEL_PORT}/api/health" >/dev/null 2>&1; then
+      is_healthy=1
+      break
+    fi
+    sleep 1
+    attempts=$((attempts + 1))
+  done
+
+  if [ $is_healthy -eq 1 ]; then
+    echo -e "${GREEN}[✓] VPS Panel backend is running and healthy on port ${PANEL_PORT}!${NC}"
+  else
+    echo -e "${RED}[WARNING] VPS Panel backend did not respond within 12 seconds.${NC}"
+    echo -e "${YELLOW}Inspecting service error logs:${NC}"
+    journalctl -u vps-panel -n 25 --no-pager || true
   fi
 
   # Configure Domain if provided
@@ -330,6 +434,7 @@ SERVICEOF
   echo -e "  ${CYAN}Admin Email:${NC}         ${BOLD}${ADMIN_EMAIL}${NC}"
   echo -e "  ${CYAN}Admin Password:${NC}      ${BOLD}${ADMIN_PASSWORD}${NC}"
   echo -e "  ${CYAN}Service Status:${NC}      ${BOLD}systemctl status vps-panel${NC}"
+  echo -e "  ${CYAN}Realtime Logs:${NC}       ${BOLD}journalctl -u vps-panel -f${NC}"
   echo -e "${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}\n"
 }
 
@@ -361,7 +466,7 @@ install_node_daemon() {
   download_panel_files
 
   cd "$INSTALL_DIR/apps/agent"
-  npm install --omit=dev --silent 2>/dev/null || npm install
+  npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
 
   cat > "$INSTALL_DIR/apps/agent/.env" << AGENTENV
 MASTER_URL=$MASTER_URL_INPUT
@@ -372,7 +477,6 @@ DRIVER=$DRIVER
 PORT=$NODE_PORT
 AGENTENV
 
-  NODE_BIN=$(which node || echo "/usr/bin/node")
   cat > /etc/systemd/system/vps-agent.service << AGENTSERVICEOF
 [Unit]
 Description=VPS Worker Node Hypervisor Agent
@@ -382,7 +486,7 @@ After=network.target docker.service
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR/apps/agent
-ExecStart=$NODE_BIN dist/index.js
+ExecStart=/usr/bin/env node dist/index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
@@ -413,16 +517,18 @@ install_standalone() {
 
   LOCAL_TOKEN="local-node-$(openssl rand -hex 12 2>/dev/null || echo 'master-token-123')"
 
+  # Insert node into SQLite database
   node -e "
-    const { DatabaseSync } = require('node:sqlite');
-    const db = new DatabaseSync('$INSTALL_DIR/apps/server/data/vps_panel.sqlite');
-    db.prepare('INSERT OR REPLACE INTO nodes (id, name, hostname, ip_address, port, auth_token, status, driver, cpu_cores, ram_total, disk_total, is_drained) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-      'node-local-master', 'Master-Node-Local', '$(hostname)', '$(get_public_ip)', $NODE_PORT, '$LOCAL_TOKEN', 'online', 'docker', 4, 8192, 100, 0
-    );
+    import('./dist/db/index.js').then(({ db }) => {
+      db.prepare('INSERT OR REPLACE INTO nodes (id, name, hostname, ip_address, port, auth_token, status, driver, cpu_cores, ram_total, disk_total, is_drained) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+        'node-local-master', 'Master-Node-Local', '$(hostname)', '$(get_public_ip)', $NODE_PORT, '$LOCAL_TOKEN', 'online', 'docker', 4, 8192, 100, 0
+      );
+      console.log('[Seed] Local Master Node registered in database.');
+    }).catch(console.error);
   " 2>/dev/null || true
 
   cd "$INSTALL_DIR/apps/agent"
-  npm install --omit=dev --silent 2>/dev/null || npm install
+  npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
 
   cat > "$INSTALL_DIR/apps/agent/.env" << AGENTENV
 MASTER_URL=ws://127.0.0.1:$PANEL_PORT
@@ -433,7 +539,6 @@ DRIVER=docker
 PORT=$NODE_PORT
 AGENTENV
 
-  NODE_BIN=$(which node || echo "/usr/bin/node")
   cat > /etc/systemd/system/vps-agent.service << AGENTSERVICEOF
 [Unit]
 Description=VPS Worker Node Hypervisor Agent
@@ -443,7 +548,7 @@ After=network.target vps-panel.service docker.service
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR/apps/agent
-ExecStart=$NODE_BIN dist/index.js
+ExecStart=/usr/bin/env node dist/index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
@@ -460,7 +565,7 @@ AGENTSERVICEOF
 }
 
 # ------------------------------------------------------------------------------
-# Direct Argument Handling (e.g. bash installer.sh vps.lunars.indevs.in)
+# Direct Argument Handling (e.g. bash install.sh vps.lunars.indevs.in)
 # ------------------------------------------------------------------------------
 if [ -n "$1" ]; then
   case "$1" in
@@ -479,12 +584,12 @@ if [ -n "$1" ]; then
       exit 0
       ;;
     -h|--help)
-      echo "Usage: bash installer.sh [DOMAIN]"
-      echo "Example: bash installer.sh vps.lunars.indevs.in"
+      echo "Usage: bash install.sh [DOMAIN]"
+      echo "Example: bash install.sh vps.lunars.indevs.in"
       exit 0
       ;;
     *)
-      # If user simply passes domain as first argument (e.g. bash installer.sh vps.lunars.indevs.in)
+      # If user simply passes domain as first argument (e.g. bash install.sh vps.lunars.indevs.in)
       PANEL_DOMAIN="$1"
       install_panel
       exit 0
@@ -499,9 +604,9 @@ print_banner
 check_root
 
 echo -e "${BOLD}Select what you would like to install:${NC}\n"
-echo -e "  ${CYAN}[0]${NC} ${BOLD}Install the Master Panel${NC} (Controller API + Modern Web Dashboard)"
-echo -e "  ${CYAN}[1]${NC} ${BOLD}Install the Worker Node Daemon${NC} (Hypervisor agent for Docker/KVM)"
-echo -e "  ${CYAN}[2]${NC} ${BOLD}Install Both [0] and [1]${NC} (Full Standalone on this VPS)"
+echo -e "  ${CYAN}[0]${NC} ${BOLD}Install Master Panel${NC} (Controller API + Modern Web Dashboard)"
+echo -e "  ${CYAN}[1]${NC} ${BOLD}Install Worker Node Daemon${NC} (Hypervisor agent for Docker/KVM)"
+echo -e "  ${CYAN}[2]${NC} ${BOLD}Install Standalone [Both 0 and 1]${NC} (Panel + Local Hypervisor on this VPS)"
 echo -e "  ${CYAN}[3]${NC} ${BOLD}Configure Cloudflare Domain & Nginx SSL${NC}"
 echo -e "  ${CYAN}[4]${NC} Exit\n"
 read -r -p "Input 0-4 [default: 0]: " ACTION
@@ -513,7 +618,13 @@ case "$ACTION_CHOICE" in
   2) install_standalone ;;
   3)
     read -r -p "Enter Domain (e.g. vps.lunars.indevs.in): " DOMAIN_NAME
-    setup_nginx_domain "$DOMAIN_NAME"
+    if [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
+      echo -e "${YELLOW}[*] Panel files not found. Running full panel installation for ${DOMAIN_NAME}...${NC}"
+      PANEL_DOMAIN="$DOMAIN_NAME"
+      install_panel
+    else
+      setup_nginx_domain "$DOMAIN_NAME"
+    fi
     ;;
   4) echo "Exiting installer."; exit 0 ;;
   *) echo -e "${RED}Invalid selection!${NC}"; exit 1 ;;
