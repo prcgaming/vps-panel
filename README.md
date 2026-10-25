@@ -26,14 +26,16 @@ If you already have your domain pointed to your VPS (e.g. via Cloudflare DNS or 
 bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) vps.lunars.indevs.in
 ```
 
-This single command:
-1. Detects your OS and automatically creates a 2GB swap file on low-RAM VPS.
-2. Automatically installs or upgrades to **Node.js 22 LTS**.
-3. Downloads and extracts the pre-built panel files directly.
-4. Initializes the SQLite database and seeds default admin credentials.
-5. Configures systemd background service `vps-panel.service`.
-6. Sets up Nginx reverse proxy with Cloudflare Real-IP restoration and SSL on both Port 80 and Port 443.
-7. Performs an automated health check on `http://127.0.0.1:4000/api/health` before completing.
+### 🔑 Official Unlimited License Keys
+
+The panel includes a flexible licensing system with unlimited nodes & VPS capacity:
+
+| Plan | License Key | Validity | Features |
+|---|---|---|---|
+| **30-Day Pro Trial** | `LUNAR-30DAY-PRO-UNLIMITED` | 30 Days from Activation | Unlimited Nodes & VPS, All Hypervisors |
+| **Lifetime Enterprise** | `LUNAR-LIFETIME-ENTERPRISE-UNLIMITED` | Permanent (Never Expires) | Unlimited Nodes & VPS, All Hypervisors, Priority Badge |
+
+*License keys can be activated in the installer prompt or directly in the panel under **Settings & License** with 1 click.*
 
 ---
 

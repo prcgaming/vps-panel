@@ -122,3 +122,29 @@ export interface ActivityLog {
   ip_address?: string;
   created_at: string;
 }
+
+export interface LicenseStatus {
+  activated: boolean;
+  valid: boolean;
+  status: 'active' | 'expired' | 'unactivated' | 'invalid';
+  planType: 'trial_30d' | 'lifetime' | null;
+  planName: string;
+  licenseKey: string | null;
+  daysRemaining: number | null;
+  expiresAt: string | null;
+  activatedAt: string | null;
+  maxNodes: string;
+  maxVps: string;
+  message?: string;
+}
+
+export interface SystemSettings {
+  panel_name?: string;
+  company_name?: string;
+  support_url?: string;
+  primary_color?: string;
+  default_driver?: string;
+  welcome_message?: string;
+  [key: string]: string | undefined;
+}
+

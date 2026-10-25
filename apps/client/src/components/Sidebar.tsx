@@ -9,7 +9,8 @@ import {
   FileText, 
   LogOut,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Key
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -32,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
 
   if (user?.role === 'admin') {
     navItems.push({ id: 'users', label: 'Users & Roles', icon: Users });
+    navItems.push({ id: 'settings', label: 'Settings & License', icon: Key, badge: 'License' });
   }
 
   return (

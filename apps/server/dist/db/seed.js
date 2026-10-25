@@ -143,6 +143,33 @@ export function seedDatabase() {
     `).run(uuidv4(), 'user-admin-root', 'cluster_initialized', 'cluster', 'cluster-root', 'Cluster initialized with default templates and Frankfurt/New York nodes', '127.0.0.1');
         console.log('[Seed] Multi-node cluster and initial VPS instance seeded');
     }
+    // 6. Seed System Settings & Branding
+    const defaultSettings = {
+        panel_name: 'Lunar VPS Panel',
+        company_name: 'Lunar Cloud Infrastructure',
+        support_url: 'https://vps.lunars.indevs.in',
+        primary_color: '#06b6d4',
+        default_driver: 'docker',
+        welcome_message: 'Welcome to Lunar Multi-Node VPS Control Panel'
+    };
+    for (const [key, val] of Object.entries(defaultSettings)) {
+        db.prepare(`
+      INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)
+    `).run(key, val);
+    }
+    // 7. Seed Initial License Key
+    const activeLicense = db.prepare('SELECT id FROM license_info WHERE id = ?').get('active_license');
+    if (!activeLicense) {
+        const initialKey = process.env.LICENSE_KEY || 'LUNAR-30DAY-PRO-UNLIMITED';
+        const isLifetime = initialKey.includes('LIFETIME') || initialKey.startsWith('LIFE-');
+        const now = new Date();
+        const expiresAt = isLifetime ? null : new Date(now.getTime() + 30 * 24 * 3600 * 1000).toISOString();
+        db.prepare(`
+      INSERT INTO license_info (id, license_key, plan_type, status, activated_at, expires_at, max_nodes, max_vps, registered_to)
+      VALUES ('active_license', ?, ?, 'active', ?, ?, -1, -1, 'Lunar Administrator')
+    `).run(initialKey, isLifetime ? 'lifetime' : 'trial_30d', now.toISOString(), expiresAt);
+        console.log(`[Seed] Initial license activated: ${initialKey} (${isLifetime ? 'Lifetime' : '30 Days'})`);
+    }
 }
 // Allow standalone running
 if (process.argv[1]?.endsWith('seed.ts') || process.argv[1]?.endsWith('seed.js')) {

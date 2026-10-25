@@ -15,6 +15,8 @@ import templatesRoutes from './routes/templates.js';
 import statsRoutes from './routes/stats.js';
 import logsRoutes from './routes/logs.js';
 import installScriptRoutes from './routes/install-script.js';
+import licenseRoutes from './routes/license.js';
+import settingsRoutes from './routes/settings.js';
 // 1. Initialize Database & Seed defaults
 initDatabase();
 seedDatabase();
@@ -32,6 +34,8 @@ app.use('/api/templates', templatesRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/install-script', installScriptRoutes);
+app.use('/api/license', licenseRoutes);
+app.use('/api/settings', settingsRoutes);
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });

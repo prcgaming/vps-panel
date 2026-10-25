@@ -468,11 +468,15 @@ install_panel() {
     read -r -p "Enter Super Admin Password [admin123]: " PASS_INPUT
     ADMIN_PASSWORD=${PASS_INPUT:-admin123}
 
+    read -r -p "Enter License Key [Press Enter for 30-Day Trial]: " KEY_INPUT
+    LICENSE_KEY=${KEY_INPUT:-"LUNAR-30DAY-PRO-UNLIMITED"}
+
     read -r -p "Enter Panel Internal Port [4000]: " PORT_INPUT
     PANEL_PORT=${PORT_INPUT:-4000}
   else
     ADMIN_EMAIL=${ADMIN_EMAIL:-admin@vpspanel.local}
     ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    LICENSE_KEY=${LICENSE_KEY:-"LUNAR-30DAY-PRO-UNLIMITED"}
   fi
 
   # Begin Installation Pipeline
@@ -492,14 +496,15 @@ NODE_ENV=production
 JWT_SECRET=$JWT_SECRET
 ADMIN_EMAIL=$ADMIN_EMAIL
 ADMIN_PASSWORD=$ADMIN_PASSWORD
+LICENSE_KEY=$LICENSE_KEY
 DB_PATH=$INSTALL_DIR/apps/server/data/vps_panel.sqlite
 CLIENT_DIST_PATH=$INSTALL_DIR/apps/client/dist
 ENVEOF
 
   mkdir -p "$INSTALL_DIR/apps/server/data"
 
-  # Seed Database with administrator credentials
-  ADMIN_EMAIL="$ADMIN_EMAIL" ADMIN_PASSWORD="$ADMIN_PASSWORD" node -e "
+  # Seed Database with administrator credentials & license
+  ADMIN_EMAIL="$ADMIN_EMAIL" ADMIN_PASSWORD="$ADMIN_PASSWORD" LICENSE_KEY="$LICENSE_KEY" node -e "
     import('./dist/db/seed.js').then(m => m.seedDatabase()).catch(err => {
       console.error('[Seed Error]', err);
     });
@@ -559,6 +564,10 @@ ENVEOF
   echo -e "  ${CYAN}Panel Access URL:${NC}    ${BOLD}${FINAL_URL}${NC}"
   echo -e "  ${CYAN}Admin Email:${NC}         ${BOLD}${ADMIN_EMAIL}${NC}"
   echo -e "  ${CYAN}Admin Password:${NC}      ${BOLD}${ADMIN_PASSWORD}${NC}"
+  echo -e "  ${CYAN}Active License:${NC}      ${BOLD}${LICENSE_KEY}${NC}"
+  echo -e "  ${PURPLE}Official Keys:${NC}"
+  echo -e "    ${CYAN}30-Day Pro (Unlimited):${NC}    ${BOLD}LUNAR-30DAY-PRO-UNLIMITED${NC}"
+  echo -e "    ${CYAN}Lifetime (Unlimited):${NC}      ${BOLD}LUNAR-LIFETIME-ENTERPRISE-UNLIMITED${NC}"
   if is_systemd; then
     echo -e "  ${CYAN}Service Status:${NC}      ${BOLD}systemctl status vps-panel${NC}"
     echo -e "  ${CYAN}Realtime Logs:${NC}       ${BOLD}journalctl -u vps-panel -f${NC}"

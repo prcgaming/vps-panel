@@ -10,19 +10,37 @@ import { IpamPage } from './pages/Ipam';
 import { TemplatesPage } from './pages/Templates';
 import { UsersPage } from './pages/Users';
 import { ActivityLogsPage } from './pages/ActivityLogs';
+import { Settings } from './pages/Settings';
 import { TerminalModal } from './components/TerminalModal';
 import { CreateVpsModal } from './components/CreateVpsModal';
 import { AddNodeModal } from './components/AddNodeModal';
-import { VpsInstance } from './types';
+import { VpsInstance, LicenseStatus } from './types';
+import { api } from './api/client';
+import { AlertTriangle, Key } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState('dashboard');
+  const [license, setLicense] = useState<LicenseStatus | null>(null);
 
   // Modals state
   const [terminalVps, setTerminalVps] = useState<VpsInstance | null>(null);
   const [showCreateVps, setShowCreateVps] = useState(false);
   const [showAddNode, setShowAddNode] = useState(false);
+
+  const loadLicense = () => {
+    api.getLicenseStatus()
+      .then((res: any) => setLicense(res))
+      .catch(console.error);
+  };
+
+  React.useEffect(() => {
+    if (user) {
+      loadLicense();
+      const interval = setInterval(loadLicense, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -50,7 +68,28 @@ export const App: React.FC = () => {
         <Navbar
           onOpenCreateVps={() => setShowCreateVps(true)}
           onOpenAddNode={() => setShowAddNode(true)}
+          license={license}
+          onNavigateTab={(tab) => setCurrentTab(tab)}
         />
+
+        {/* Expired / Unactivated License Warning Banner */}
+        {license && !license.valid && (
+          <div className="bg-rose-950/80 border-b border-rose-800/80 px-8 py-2.5 flex items-center justify-between text-xs text-rose-200">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>
+                <strong>License Attention Required:</strong> {license.message || 'Please activate a valid license key to continue unlimited operations.'}
+              </span>
+            </div>
+            <button
+              onClick={() => setCurrentTab('settings')}
+              className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-lg transition flex items-center gap-1.5"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Activate Key</span>
+            </button>
+          </div>
+        )}
 
         {/* View Router */}
         <main className="flex-1 overflow-y-auto">
@@ -82,6 +121,10 @@ export const App: React.FC = () => {
           {currentTab === 'users' && <UsersPage />}
 
           {currentTab === 'logs' && <ActivityLogsPage />}
+
+          {currentTab === 'settings' && (
+            <Settings onLicenseUpdated={loadLicense} />
+          )}
         </main>
       </div>
 

@@ -67,4 +67,14 @@ export const api = {
 
   // Logs
   getLogs: () => apiRequest('/logs'),
+
+  // License
+  getLicenseStatus: () => apiRequest('/license/status'),
+  activateLicense: (licenseKey: string, registeredTo?: string) =>
+    apiRequest('/license/activate', { method: 'POST', body: JSON.stringify({ licenseKey, registeredTo }) }),
+
+  // Settings
+  getSettings: () => apiRequest('/settings'),
+  updateSettings: (settings: any) =>
+    apiRequest('/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
 };

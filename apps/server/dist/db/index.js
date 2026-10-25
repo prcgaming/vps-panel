@@ -131,6 +131,24 @@ export function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS license_info (
+      id TEXT PRIMARY KEY,
+      license_key TEXT NOT NULL,
+      plan_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      activated_at DATETIME NOT NULL,
+      expires_at DATETIME,
+      max_nodes INTEGER NOT NULL DEFAULT -1,
+      max_vps INTEGER NOT NULL DEFAULT -1,
+      registered_to TEXT DEFAULT 'Lunar Administrator'
+    );
+
     CREATE INDEX IF NOT EXISTS idx_vps_node ON vps_instances(node_id);
     CREATE INDEX IF NOT EXISTS idx_vps_user ON vps_instances(user_id);
     CREATE INDEX IF NOT EXISTS idx_nodes_status ON nodes(status);
