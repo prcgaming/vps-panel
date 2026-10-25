@@ -155,6 +155,15 @@ configure_nginx_cloudflare() {
     return 1
   fi
 
+  # Auto-install Master Panel if not already present on this VPS!
+  if [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
+    echo -e "\n${YELLOW}[INFO] VPS Panel files are not installed yet in ${INSTALL_DIR}.${NC}"
+    echo -e "${YELLOW}--> Installing Master Panel files and services first...${NC}\n"
+    DOMAIN_NAME_CLI="$DOMAIN_NAME"
+    install_panel
+    return 0
+  fi
+
   echo -e "\n${YELLOW}--> Installing Nginx and Certbot for Cloudflare domain: ${BOLD}$DOMAIN_NAME${NC}..."
 
   if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
@@ -366,6 +375,11 @@ install_panel() {
   # Administrator Credentials Prompt
   if [ -t 0 ]; then
     echo -e "\n${CYAN}${BOLD}--- Administrator Account Setup ---${NC}"
+    if [ -z "$DOMAIN_NAME_CLI" ]; then
+      read -r -p "Enter Domain for this Panel (e.g. vps.lunars.indevs.in, or press Enter for IP): " INPUT_DOMAIN
+      DOMAIN_NAME_CLI=${INPUT_DOMAIN:-""}
+    fi
+
     read -r -p "Enter Super Admin Email [admin@vpspanel.local]: " INPUT_EMAIL
     ADMIN_EMAIL=${INPUT_EMAIL:-admin@vpspanel.local}
 
