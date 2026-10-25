@@ -120,21 +120,38 @@ install_docker() {
 # Clone or Update Repository
 setup_repository() {
   echo -e "\n${YELLOW}--> Setting up VPS Panel in ${INSTALL_DIR}...${NC}"
-  mkdir -p "$INSTALL_DIR"
   
   # If running from inside the cloned folder itself
   if [ -f "./apps/server/package.json" ]; then
     echo -e "${BLUE}[INFO] Installing from current directory source...${NC}"
+    mkdir -p "$INSTALL_DIR"
     cp -r ./* "$INSTALL_DIR/" 2>/dev/null || true
-  elif [ ! -d "$INSTALL_DIR/.git" ]; then
-    echo -e "${BLUE}[INFO] Cloning repository from GitHub...${NC}"
-    git clone "$REPO_URL" "$INSTALL_DIR"
+  elif [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
+    echo -e "${BLUE}[INFO] Downloading repository files from GitHub to ${INSTALL_DIR}...${NC}"
+    rm -rf "$INSTALL_DIR" 2>/dev/null || true
+    mkdir -p "$INSTALL_DIR"
+    
+    # Try git clone first, fallback to direct tarball
+    if command -v git >/dev/null 2>&1 && git clone "$REPO_URL" "$INSTALL_DIR" 2>/dev/null; then
+      echo -e "${GREEN}[OK] Repository cloned successfully.${NC}"
+    else
+      echo -e "${YELLOW}--> Git clone unavailable. Downloading direct source archive...${NC}"
+      curl -sSL "https://github.com/prcgaming/vps-panel/archive/refs/heads/main.tar.gz" | tar -xz --strip-components=1 -C "$INSTALL_DIR"
+    fi
   else
-    echo -e "${BLUE}[INFO] Updating existing repository...${NC}"
-    cd "$INSTALL_DIR" && git pull || true
+    echo -e "${BLUE}[INFO] Updating existing repository in ${INSTALL_DIR}...${NC}"
+    cd "$INSTALL_DIR" && (git pull 2>/dev/null || true)
+  fi
+
+  # Final verification that files exist
+  if [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
+    echo -e "${YELLOW}--> Verifying and downloading source files...${NC}"
+    mkdir -p "$INSTALL_DIR"
+    curl -sSL "https://github.com/prcgaming/vps-panel/archive/refs/heads/main.tar.gz" | tar -xz --strip-components=1 -C "$INSTALL_DIR"
   fi
   
   cd "$INSTALL_DIR"
+  echo -e "${GREEN}[OK] VPS Panel files verified in ${INSTALL_DIR}.${NC}"
 }
 
 # ==============================================================================
