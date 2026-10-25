@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Copy, Check, Server, Terminal, ShieldAlert } from 'lucide-react';
 import { api } from '../api/client';
+import { useTheme } from '../context/ThemeContext';
 
 interface AddNodeModalProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface AddNodeModalProps {
 }
 
 export const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onNodeAdded }) => {
+  const { currentTheme } = useTheme();
   const [nodeName, setNodeName] = useState('');
   const [driver, setDriver] = useState('docker');
   const [loading, setLoading] = useState(false);
@@ -97,7 +99,7 @@ export const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onNodeAdded
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium rounded-xl shadow-lg shadow-cyan-500/20 transition disabled:opacity-50"
+                  className={`w-full py-3 px-4 ${currentTheme.btnPrimary} text-white font-medium rounded-xl transition disabled:opacity-50`}
                 >
                   {loading ? 'Generating Join Token...' : 'Generate Node Join Command'}
                 </button>

@@ -753,10 +753,21 @@ install_node_daemon() {
 
   echo -e "${CYAN}${BOLD}[+] Worker Node Hypervisor Agent Installation${NC}\n"
 
-  read -r -p "Enter Master Panel URL (e.g. https://vps.lunars.indevs.in): " MASTER_URL_INPUT
-  read -r -p "Enter Worker Node Join Token (from Panel -> Nodes -> Add Node): " TOKEN_INPUT
-  read -r -p "Choose Driver (docker / kvm / mock) [docker]: " DRIVER_CHOICE
-  DRIVER=${DRIVER_CHOICE:-docker}
+  if [ -z "$MASTER_URL_INPUT" ]; then
+    read -r -p "Enter Master Panel URL (e.g. https://vps.lunars.indevs.in): " MASTER_URL_INPUT
+  fi
+  if [ -z "$TOKEN_INPUT" ]; then
+    read -r -p "Enter Worker Node Join Token (from Panel -> Nodes -> Add Node): " TOKEN_INPUT
+  fi
+  if [ -z "$DRIVER" ]; then
+    read -r -p "Choose Driver (docker / kvm) [default: docker]: " DRIVER_CHOICE
+    DRIVER=${DRIVER_CHOICE:-docker}
+  fi
+
+  if [ -z "$MASTER_URL_INPUT" ] || [ -z "$TOKEN_INPUT" ]; then
+    echo -e "${RED}[ERROR] Both Master Panel URL and Join Token are required to connect a worker node!${NC}"
+    exit 1
+  fi
 
   install_dependencies
 
@@ -1087,69 +1098,97 @@ show_help() {
 # ------------------------------------------------------------------------------
 # Direct CLI Argument Router
 # ------------------------------------------------------------------------------
-case "$1" in
-  install)
-    shift
-    if [ -n "$1" ]; then
-      PANEL_DOMAIN="$1"
-    fi
-    install_panel
-    exit 0
-    ;;
-  update|upgrade)
-    cmd_update
-    exit 0
-    ;;
-  start)
-    cmd_start
-    exit 0
-    ;;
-  stop)
-    cmd_stop
-    exit 0
-    ;;
-  restart)
-    cmd_restart
-    exit 0
-    ;;
-  status|info)
-    cmd_status
-    exit 0
-    ;;
-  logs|log)
-    cmd_logs
-    exit 0
-    ;;
-  uninstall|remove)
-    cmd_uninstall
-    exit 0
-    ;;
-  --panel)
-    PANEL_DOMAIN="$2"
-    install_panel
-    exit 0
-    ;;
-  --standalone)
-    PANEL_DOMAIN="$2"
-    install_standalone
-    exit 0
-    ;;
-  --node|--agent)
-    install_node_daemon
-    exit 0
-    ;;
-  -h|--help)
-    show_help
-    exit 0
-    ;;
-  *)
-    if [ -n "$1" ]; then
-      PANEL_DOMAIN="$1"
+IS_NODE_INSTALL=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    install)
+      shift
+      if [ -n "$1" ] && [[ ! "$1" =~ ^-- ]]; then
+        PANEL_DOMAIN="$1"
+        shift
+      fi
       install_panel
       exit 0
-    fi
-    ;;
-esac
+      ;;
+    update|upgrade)
+      cmd_update
+      exit 0
+      ;;
+    start)
+      cmd_start
+      exit 0
+      ;;
+    stop)
+      cmd_stop
+      exit 0
+      ;;
+    restart)
+      cmd_restart
+      exit 0
+      ;;
+    status|info)
+      cmd_status
+      exit 0
+      ;;
+    logs|log)
+      cmd_logs
+      exit 0
+      ;;
+    uninstall|remove)
+      cmd_uninstall
+      exit 0
+      ;;
+    --node|--agent|node|add-node)
+      IS_NODE_INSTALL=1
+      shift
+      ;;
+    --panel-url|--master-url)
+      MASTER_URL_INPUT="$2"
+      IS_NODE_INSTALL=1
+      shift 2
+      ;;
+    --token|--join-token)
+      TOKEN_INPUT="$2"
+      IS_NODE_INSTALL=1
+      shift 2
+      ;;
+    --driver)
+      DRIVER="$2"
+      shift 2
+      ;;
+    --panel)
+      PANEL_DOMAIN="$2"
+      shift 2
+      install_panel
+      exit 0
+      ;;
+    --standalone)
+      PANEL_DOMAIN="$2"
+      shift 2
+      install_standalone
+      exit 0
+      ;;
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    *)
+      if [ -n "$1" ] && [[ ! "$1" =~ ^- ]]; then
+        PANEL_DOMAIN="$1"
+        shift
+        install_panel
+        exit 0
+      fi
+      shift
+      ;;
+  esac
+done
+
+if [ "$IS_NODE_INSTALL" = "1" ]; then
+  install_node_daemon
+  exit 0
+fi
 
 # ------------------------------------------------------------------------------
 # Interactive Menu (When run without arguments)

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Server, Plus, RefreshCw, Cpu, Activity, HardDrive, Trash2, ShieldOff, ShieldCheck, CheckCircle } from 'lucide-react';
 import { api } from '../api/client';
+import { useTheme } from '../context/ThemeContext';
 import { Node } from '../types';
 
 interface NodesPageProps {
@@ -8,6 +9,7 @@ interface NodesPageProps {
 }
 
 export const NodesPage: React.FC<NodesPageProps> = ({ onOpenAddNode }) => {
+  const { currentTheme } = useTheme();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,7 +66,7 @@ export const NodesPage: React.FC<NodesPageProps> = ({ onOpenAddNode }) => {
           </button>
           <button
             onClick={onOpenAddNode}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-500/20 transition"
+            className={`flex items-center gap-2 px-4 py-2 ${currentTheme.btnPrimary} text-white text-xs font-semibold rounded-xl transition`}
           >
             <Plus className="w-4 h-4" />
             <span>Connect New Node</span>

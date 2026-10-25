@@ -169,17 +169,91 @@ You can customize the panel's appearance right from the browser:
 
 ---
 
-## 🖥️ Connecting External Worker Nodes
+## 🖥️ Complete Guide: How to Setup & Connect Worker Nodes
 
-Scale your cluster by connecting unlimited external Linux servers:
+VPS Panel allows you to create an unlimited multi-server cluster. Worker nodes are external bare-metal or cloud servers that run hypervisors (Docker containers or KVM VMs) and report hardware telemetry back to your Master Controller.
 
-1. Go to **Nodes** in your panel dashboard.
-2. Click **Add Worker Node** and generate a Join Token.
-3. On your remote worker server, run:
-```bash
-bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) --node
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Administrator
+    participant Panel as Master Panel UI
+    participant Worker as Worker Server (SSH)
+    participant Hub as Master WebSocket Hub
+
+    Admin->>Panel: Click "Connect New Node"
+    Panel->>Panel: Generate 24h Secure Join Token
+    Panel-->>Admin: Show 1-Line Auto-Join Script
+    Admin->>Worker: Paste & Run One-Line Script via SSH
+    Worker->>Worker: Auto-install Docker & Worker Agent
+    Worker->>Hub: Connect WebSocket (/ws/node?token=...)
+    Hub->>Hub: Verify Token & Register Node in DB
+    Hub-->>Panel: Live Telemetry (CPU Cores, RAM, Disk)
+    Panel-->>Admin: Node shows ONLINE & ready for VPS deployment!
 ```
-4. Enter your Master Panel URL and the Join Token. The node will automatically connect, stream live telemetry (CPU, RAM, Disk), and accept VPS creation commands!
+
+---
+
+### 🚀 Method 1: 1-Click Automated Setup (Zero Prompts - Recommended)
+
+This is the fastest method. The Master Panel generates a self-contained auto-join command:
+
+1. **Log In to Master Panel**: Open your dashboard (e.g. `https://vps.lunars.indevs.in`) and click **Nodes & Hypervisors** in the left sidebar.
+2. **Generate Join Command**:
+   - Click the **Connect New Node** button in the top right.
+   - Enter a friendly name for the node (e.g. `Node-Frankfurt-02`, `US-East-KVM-1`).
+   - Select the virtualization driver (**Docker** for fast high-density containers, or **KVM** for hardware VMs).
+   - Click **Generate Node Join Command**.
+3. **Execute on Worker VPS**:
+   - Connect to your target worker server via SSH as `root`.
+   - Paste the one-line command copied from your dashboard:
+     ```bash
+     curl -sSL https://vps.lunars.indevs.in/api/install-script | bash -s -- --panel-url https://vps.lunars.indevs.in --token <JOIN_TOKEN> --driver docker
+     ```
+4. **Done!**: In ~15 seconds, the script will:
+   - Install **Node.js 22 LTS** (if missing).
+   - Install the official **Docker Engine** (if Docker driver is chosen) and start the daemon.
+   - Deploy and start the `vps-agent` service.
+   - Connect to your Master Panel over encrypted WebSockets.
+   - The node will instantly appear **ONLINE** (green pulsing badge) in your panel with real-time CPU, RAM, and Disk metrics!
+
+---
+
+### 💻 Method 2: Interactive CLI Setup via GitHub Installer
+
+If you prefer an interactive step-by-step setup on the remote machine:
+
+1. Connect to your worker server via SSH as `root`.
+2. Run the universal installer with the `--node` flag:
+   ```bash
+   bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) --node
+   ```
+3. The installer will interactively prompt:
+   - **Master Panel URL**: e.g. `https://vps.lunars.indevs.in`
+   - **Worker Node Join Token**: Paste the token generated from your panel (**Nodes** -> **Connect New Node**).
+   - **Driver**: Choose `docker` or `kvm` (default: `docker`).
+4. The agent will configure services and pair automatically.
+
+---
+
+### 🏠 Method 3: Local Node (Pre-configured on Master Panel Server)
+
+**You do NOT need a second server to get started!**
+When you install the Master Panel using the standard install command:
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh)
+```
+The installer **automatically sets up the host VPS as an active Local Hypervisor Node** (`Master-Node-Local`). Docker Engine, container caching, and the local agent daemon are enabled right out of the box so you can deploy VPS instances immediately!
+
+---
+
+### 🛡️ Managing Nodes in the Panel
+
+Once your nodes are connected, you can manage them from **Nodes & Hypervisors**:
+- **Live Hardware Telemetry**: Monitor real-time allocated CPU cores, RAM usage, and total active VPS count.
+- **Drain Node**: Toggle *Drain* on any node to temporarily prevent new VPS instances from being allocated to that machine (ideal during hardware maintenance or kernel upgrades).
+- **Remove Node**: Safely delete retired worker servers from the cluster.
+- **Smart Auto-Scheduler**: When deploying a VPS, leaving the *Node* field blank automatically selects the online, non-drained node with the lowest RAM allocation.
 
 ---
 
