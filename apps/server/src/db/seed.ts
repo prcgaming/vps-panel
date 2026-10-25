@@ -6,22 +6,24 @@ export function seedDatabase() {
   initDatabase();
 
   // 1. Seed Users
-  const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@vpspanel.local');
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@vpspanel.local';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
   if (!existingAdmin) {
-    const adminPass = bcrypt.hashSync('admin123', 10);
+    const adminPass = bcrypt.hashSync(adminPassword, 10);
     const userPass = bcrypt.hashSync('user123', 10);
 
     db.prepare(`
       INSERT INTO users (id, email, password_hash, role, name)
       VALUES (?, ?, ?, ?, ?)
-    `).run('user-admin-root', 'admin@vpspanel.local', adminPass, 'admin', 'Super Admin');
+    `).run('user-admin-root', adminEmail, adminPass, 'admin', 'Super Admin');
 
     db.prepare(`
       INSERT INTO users (id, email, password_hash, role, name)
       VALUES (?, ?, ?, ?, ?)
     `).run('user-demo-client', 'user@vpspanel.local', userPass, 'user', 'Client User');
 
-    console.log('[Seed] Users created: admin@vpspanel.local (admin123), user@vpspanel.local (user123)');
+    console.log(`[Seed] Users created: ${adminEmail} (${adminPassword}), user@vpspanel.local (user123)`);
   }
 
   // 2. Seed OS Templates

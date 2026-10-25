@@ -10,16 +10,20 @@ A modern, high-performance, multi-node VPS (Virtual Private Server) control pane
 
 ---
 
-## ⚡ Unified 1-Line Installer (All Options & Cloudflare)
+## ⚡ Quick 1-Command Installation (Pterodactyl-Style)
 
-You can run the interactive master installer on any clean Linux VPS (Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9):
+Run this single command on any clean Linux VPS (Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9):
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash
+bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh)
 ```
+*(Or via pipe: `curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash`)*
 
-The script presents a clean interactive menu:
+The script immediately launches an interactive wizard:
 ```
+===================================================================
+      VPS PANEL - Multi-Node Management & Cloud Orchestrator
+===================================================================
 Select Installation & Configuration Option:
 
   [1] Master Panel (Controller API + Modern Web Admin Dashboard)

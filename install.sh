@@ -7,6 +7,11 @@
 
 set -e
 
+# If stdin is not a terminal (e.g. piped via curl | bash), reconnect to /dev/tty
+if [ ! -t 0 ] && [ -e /dev/tty ]; then
+  exec < /dev/tty
+fi
+
 # Terminal Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -342,6 +347,22 @@ install_panel() {
   install_base_deps
   setup_repository
 
+  # Administrator Credentials Prompt
+  if [ -t 0 ]; then
+    echo -e "\n${CYAN}${BOLD}--- Administrator Account Setup ---${NC}"
+    read -r -p "Enter Super Admin Email [admin@vpspanel.local]: " INPUT_EMAIL
+    ADMIN_EMAIL=${INPUT_EMAIL:-admin@vpspanel.local}
+
+    read -r -p "Enter Super Admin Password [admin123]: " INPUT_PASSWORD
+    ADMIN_PASSWORD=${INPUT_PASSWORD:-admin123}
+
+    read -r -p "Enter Panel Web Port [4000]: " INPUT_PORT
+    PANEL_PORT=${INPUT_PORT:-4000}
+  else
+    ADMIN_EMAIL=${ADMIN_EMAIL:-admin@vpspanel.local}
+    ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+  fi
+
   echo -e "\n${YELLOW}--> Installing Master Panel server dependencies...${NC}"
   cd "$INSTALL_DIR/apps/server"
   npm install
@@ -360,6 +381,8 @@ PORT=$PANEL_PORT
 HOST=0.0.0.0
 NODE_ENV=production
 JWT_SECRET=$JWT_SECRET
+ADMIN_EMAIL=$ADMIN_EMAIL
+ADMIN_PASSWORD=$ADMIN_PASSWORD
 DB_PATH=$INSTALL_DIR/apps/server/data/vps_panel.sqlite
 CLIENT_DIST_PATH=$INSTALL_DIR/apps/client/dist
 ENVEOF
@@ -370,7 +393,7 @@ ENVEOF
 
   # Initialize database & seed default admin
   echo -e "\n${YELLOW}--> Initializing Database & Seeding Default Admin...${NC}"
-  npm run seed
+  ADMIN_EMAIL="$ADMIN_EMAIL" ADMIN_PASSWORD="$ADMIN_PASSWORD" npm run seed
 
   # Configure Systemd Service
   echo -e "\n${YELLOW}--> Configuring systemd service (vps-panel.service)...${NC}"
@@ -409,8 +432,8 @@ SERVICEOF
   echo -e "${GREEN}${BOLD} Master Panel Successfully Installed & Running!${NC}"
   echo -e "${GREEN}===================================================================${NC}"
   echo -e "${CYAN}Access URL:${NC}       ${BOLD}http://${SERVER_IP}:${PANEL_PORT}${NC}"
-  echo -e "${CYAN}Default Admin:${NC}    ${BOLD}admin@vpspanel.local${NC}"
-  echo -e "${CYAN}Default Password:${NC} ${BOLD}admin123${NC}"
+  echo -e "${CYAN}Admin Email:${NC}      ${BOLD}${ADMIN_EMAIL}${NC}"
+  echo -e "${CYAN}Admin Password:${NC}   ${BOLD}${ADMIN_PASSWORD}${NC}"
   echo -e "${PURPLE}-------------------------------------------------------------------${NC}"
   echo -e "${YELLOW}Next Step: Connect worker nodes via 'Nodes' in the dashboard!${NC}"
   echo -e "${GREEN}===================================================================${NC}\n"
@@ -569,7 +592,8 @@ AGENTSERVICEOF
   echo -e "${GREEN}${BOLD} Standalone Master Panel + Local Worker Node Ready!${NC}"
   echo -e "${GREEN}===================================================================${NC}"
   echo -e "${CYAN}Access Dashboard:${NC} ${BOLD}http://$(get_public_ip):${PANEL_PORT}${NC}"
-  echo -e "${CYAN}Credentials:${NC}      ${BOLD}admin@vpspanel.local / admin123${NC}"
+  echo -e "${CYAN}Admin Email:${NC}      ${BOLD}${ADMIN_EMAIL}${NC}"
+  echo -e "${CYAN}Admin Password:${NC}   ${BOLD}${ADMIN_PASSWORD}${NC}"
   echo -e "${GREEN}===================================================================${NC}\n"
 }
 
