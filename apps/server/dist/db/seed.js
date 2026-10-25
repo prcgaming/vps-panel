@@ -150,7 +150,12 @@ export function seedDatabase() {
         support_url: 'https://vps.lunars.indevs.in',
         primary_color: '#06b6d4',
         default_driver: 'docker',
-        welcome_message: 'Welcome to Lunar Multi-Node VPS Control Panel'
+        welcome_message: 'Welcome to Lunar Multi-Node VPS Control Panel',
+        allow_registration: '1',
+        allow_user_create_vps: '1',
+        allow_user_manage_power: '1',
+        max_vps_per_user: '2',
+        panel_logo_url: ''
     };
     for (const [key, val] of Object.entries(defaultSettings)) {
         db.prepare(`

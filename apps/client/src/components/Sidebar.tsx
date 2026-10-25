@@ -10,9 +10,11 @@ import {
   LogOut,
   ExternalLink,
   ChevronRight,
-  Key
+  Key,
+  Orbit
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api/client';
 
 interface SidebarProps {
   currentTab: string;
@@ -21,6 +23,17 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) => {
   const { user, logout } = useAuth();
+  const [panelName, setPanelName] = React.useState('VPS Panel');
+  const [logoUrl, setLogoUrl] = React.useState('');
+
+  React.useEffect(() => {
+    api.getSettings().then((res: any) => {
+      if (res.settings) {
+        if (res.settings.panel_name) setPanelName(res.settings.panel_name);
+        if (res.settings.panel_logo_url) setLogoUrl(res.settings.panel_logo_url);
+      }
+    }).catch(() => {});
+  }, []);
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -41,15 +54,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       <div>
         {/* Brand Header */}
         <div className="h-16 flex items-center px-6 border-b border-slate-800/80 gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-black text-lg">
-            V
-          </div>
-          <div>
-            <h1 className="font-bold text-slate-100 text-base leading-tight tracking-tight flex items-center gap-1.5">
-              VPS Panel
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">v1.0</span>
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="w-9 h-9 rounded-xl object-contain bg-slate-900 border border-slate-700 p-1" />
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-black text-lg">
+              <Orbit className="w-5 h-5 text-cyan-200" />
+            </div>
+          )}
+          <div className="overflow-hidden">
+            <h1 className="font-bold text-slate-100 text-sm leading-tight tracking-tight truncate">
+              {panelName}
             </h1>
-            <p className="text-[11px] text-slate-400">Multi-Node Cloud Controller</p>
+            <p className="text-[10px] text-cyan-400 font-mono">Cloud Orchestrator</p>
           </div>
         </div>
 

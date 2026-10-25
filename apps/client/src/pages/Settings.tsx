@@ -220,7 +220,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
 
           {/* Quick-Fill Presets for Easy Setup */}
           <div className="space-y-2 pt-2 border-t border-slate-700/60">
-            <span className="text-xs text-slate-400 font-medium block">1-Click Official Keys:</span>
+            <span className="text-xs text-slate-400 font-medium block">Quick Tier Activation:</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               
               {/* 30-Day Pro Key */}
@@ -230,10 +230,10 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
                 className="text-left p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 hover:border-cyan-500/60 transition group cursor-pointer"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-cyan-400 group-hover:text-cyan-300">⚡ 30-Day Unlimited Pro</span>
+                  <span className="text-xs font-semibold text-cyan-400 group-hover:text-cyan-300">⚡ 30-Day Pro Tier</span>
                   <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800/60 px-1.5 py-0.5 rounded">30 Days</span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1 font-mono">LUNAR-30DAY-PRO-UNLIMITED</p>
+                <p className="text-[11px] text-slate-400 mt-1">Activate standard 30-day evaluation</p>
               </button>
 
               {/* Lifetime Enterprise Key */}
@@ -243,10 +243,10 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
                 className="text-left p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 hover:border-amber-500/60 transition group cursor-pointer"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-amber-400 group-hover:text-amber-300">👑 Lifetime Enterprise</span>
-                  <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-800/60 px-1.5 py-0.5 rounded">Forever</span>
+                  <span className="text-xs font-semibold text-amber-400 group-hover:text-amber-300">👑 Lifetime Enterprise Tier</span>
+                  <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-800/60 px-1.5 py-0.5 rounded">Permanent</span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1 font-mono">LUNAR-LIFETIME-ENTERPRISE-UNLIMITED</p>
+                <p className="text-[11px] text-slate-400 mt-1">Activate permanent enterprise tier</p>
               </button>
             </div>
           </div>
@@ -317,6 +317,19 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
 
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                Custom Logo URL (Optional)
+              </label>
+              <input
+                type="text"
+                value={settings.panel_logo_url || ''}
+                onChange={(e) => setSettings({ ...settings, panel_logo_url: e.target.value })}
+                placeholder="https://example.com/logo.png"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
                 Default Hypervisor Driver
               </label>
               <select
@@ -328,6 +341,71 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
                 <option value="kvm">KVM / QEMU (Full Hardware Virtualization)</option>
                 <option value="mock">Mock Driver (Testing & Simulation)</option>
               </select>
+            </div>
+
+            {/* Public Permissions & Self-Service Toggles */}
+            <div className="pt-4 border-t border-slate-700/80 space-y-3">
+              <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider text-purple-300">
+                Public Access & Self-Service Permissions
+              </h3>
+
+              {/* Allow Public Registration */}
+              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 cursor-pointer hover:border-slate-600 transition">
+                <div>
+                  <div className="text-xs font-semibold text-white">Public User Registration</div>
+                  <div className="text-[11px] text-slate-400">Allow new visitors to register their own account on the login page</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.allow_registration === '1' || settings.allow_registration === 'true'}
+                  onChange={(e) => setSettings({ ...settings, allow_registration: e.target.checked ? '1' : '0' })}
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
+                />
+              </label>
+
+              {/* Allow Users to Deploy VPS */}
+              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 cursor-pointer hover:border-slate-600 transition">
+                <div>
+                  <div className="text-xs font-semibold text-white">Client User VPS Deployment</div>
+                  <div className="text-[11px] text-slate-400">Allow client users to deploy & create their own VPS instances</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.allow_user_create_vps === '1' || settings.allow_user_create_vps === 'true'}
+                  onChange={(e) => setSettings({ ...settings, allow_user_create_vps: e.target.checked ? '1' : '0' })}
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
+                />
+              </label>
+
+              {/* Allow Users Power Management */}
+              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 cursor-pointer hover:border-slate-600 transition">
+                <div>
+                  <div className="text-xs font-semibold text-white">Client VPS Power Controls</div>
+                  <div className="text-[11px] text-slate-400">Allow users to Start, Stop, and Restart their own VPS instances</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.allow_user_manage_power === '1' || settings.allow_user_manage_power === 'true'}
+                  onChange={(e) => setSettings({ ...settings, allow_user_manage_power: e.target.checked ? '1' : '0' })}
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
+                />
+              </label>
+
+              {/* Max VPS Limit per User */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                <div>
+                  <div className="text-xs font-semibold text-white">Max VPS Quota per User</div>
+                  <div className="text-[11px] text-slate-400">Maximum active VPS instances a client user can create</div>
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={settings.max_vps_per_user || '2'}
+                  onChange={(e) => setSettings({ ...settings, max_vps_per_user: e.target.value })}
+                  className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-center text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
             </div>
           </div>
 

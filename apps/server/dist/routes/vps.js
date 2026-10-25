@@ -33,6 +33,21 @@ router.post('/', authenticate, async (req, res) => {
         res.status(400).json({ error: 'Name and hostname are required' });
         return;
     }
+    // Permission & Quota Checks for Non-Admin Users
+    if (user.role !== 'admin') {
+        const allowCreate = db.prepare("SELECT value FROM system_settings WHERE key = 'allow_user_create_vps'").get();
+        if (allowCreate && (allowCreate.value === '0' || allowCreate.value === 'false')) {
+            res.status(403).json({ error: 'VPS deployment is currently restricted by the administrator.' });
+            return;
+        }
+        const maxLimitRow = db.prepare("SELECT value FROM system_settings WHERE key = 'max_vps_per_user'").get();
+        const maxLimit = maxLimitRow ? parseInt(maxLimitRow.value, 10) : 2;
+        const userVpsCount = db.prepare('SELECT COUNT(*) as c FROM vps_instances WHERE user_id = ?').get(user.id).c;
+        if (userVpsCount >= maxLimit) {
+            res.status(403).json({ error: `You have reached your limit of ${maxLimit} VPS instance(s). Please contact an administrator to increase your quota.` });
+            return;
+        }
+    }
     // 1. Select Node (Manual or Intelligent Auto-Scheduler)
     let targetNodeId = node_id;
     if (!targetNodeId) {
@@ -160,6 +175,14 @@ router.post('/:id/action', authenticate, async (req, res) => {
     if (user.role !== 'admin' && vps.user_id !== user.id) {
         res.status(403).json({ error: 'Access denied' });
         return;
+    }
+    // Power action permission check for non-admin users
+    if (user.role !== 'admin' && ['start', 'stop', 'restart'].includes(action)) {
+        const allowPower = db.prepare("SELECT value FROM system_settings WHERE key = 'allow_user_manage_power'").get();
+        if (allowPower && (allowPower.value === '0' || allowPower.value === 'false')) {
+            res.status(403).json({ error: 'VPS power actions are currently restricted by the administrator.' });
+            return;
+        }
     }
     const validActions = ['start', 'stop', 'restart', 'reinstall', 'reset_password', 'resize'];
     if (!validActions.includes(action)) {

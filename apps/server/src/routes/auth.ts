@@ -46,6 +46,58 @@ router.post('/login', (req: Request, res: Response) => {
   });
 });
 
+// POST /api/auth/register - Public self-service registration
+router.post('/register', (req: Request, res: Response) => {
+  const allowReg = db.prepare("SELECT value FROM system_settings WHERE key = 'allow_registration'").get() as { value: string } | undefined;
+  if (allowReg && (allowReg.value === '0' || allowReg.value === 'false')) {
+    res.status(403).json({ error: 'Public user registration is currently disabled by administrator.' });
+    return;
+  }
+
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    res.status(400).json({ error: 'Name, email, and password are required' });
+    return;
+  }
+
+  if (password.length < 6) {
+    res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    return;
+  }
+
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing) {
+    res.status(409).json({ error: 'An account with this email already exists' });
+    return;
+  }
+
+  const id = `user-${Date.now().toString(36)}`;
+  const hash = bcrypt.hashSync(password, 10);
+
+  db.prepare(`
+    INSERT INTO users (id, email, password_hash, role, name)
+    VALUES (?, ?, ?, 'user', ?)
+  `).run(id, email, hash, name);
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { id, email, role: 'user', name },
+    config.jwtSecret,
+    { expiresIn: 7 * 24 * 3600 }
+  );
+
+  // Log activity
+  db.prepare(`
+    INSERT INTO activity_logs (id, user_id, action, details, ip_address)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(uuidv4(), id, 'register', `New user registered: ${email}`, req.ip || '127.0.0.1');
+
+  res.status(201).json({
+    token,
+    user: { id, email, name, role: 'user' }
+  });
+});
+
 // GET /api/auth/me
 router.get('/me', authenticate, (req: Request, res: Response) => {
   const user = db.prepare('SELECT id, email, role, name, created_at FROM users WHERE id = ?').get(req.user!.id);

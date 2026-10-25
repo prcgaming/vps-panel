@@ -12,7 +12,7 @@ A modern, high-performance, multi-node VPS (Virtual Private Server) control pane
 
 ## ⚡ Quick 1-Command Installation (Pterodactyl-Style)
 
-Run this single command on your Linux VPS (Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9):
+Run this single command on your Linux VPS (supports Ubuntu 20.04/22.04/24.04, Debian 11/12, CentOS/AlmaLinux/Rocky 8/9, Bare Metal, KVM, Docker, LXC, and WSL):
 
 ```bash
 bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh)
@@ -20,237 +20,116 @@ bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/inst
 
 ### ⚡ Express 1-Command Install with Domain (Zero Prompts)
 
-If you already have your domain pointed to your VPS (e.g. via Cloudflare DNS or Tunnel):
+If your domain is already pointed to your VPS via Cloudflare:
 
 ```bash
-bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) vps.lunars.indevs.in
+bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) panel.yourdomain.com
 ```
 
-### 🔑 Official Unlimited License Keys
-
-The panel includes a flexible licensing system with unlimited nodes & VPS capacity:
-
-| Plan | License Key | Validity | Features |
-|---|---|---|---|
-| **30-Day Pro Trial** | `LUNAR-30DAY-PRO-UNLIMITED` | 30 Days from Activation | Unlimited Nodes & VPS, All Hypervisors |
-| **Lifetime Enterprise** | `LUNAR-LIFETIME-ENTERPRISE-UNLIMITED` | Permanent (Never Expires) | Unlimited Nodes & VPS, All Hypervisors, Priority Badge |
-
-*License keys can be activated in the installer prompt or directly in the panel under **Settings & License** with 1 click.*
+This single command:
+1. Detects your operating system and environment (Systemd, Docker, or LXC container).
+2. Automatically creates a 2GB swap file on low-memory VPS.
+3. Automatically installs or upgrades to **Node.js 22 LTS** (Active LTS).
+4. Downloads and extracts the pre-built panel files instantly.
+5. Sets up the SQLite database and initializes administrator credentials.
+6. Configures background process management (Systemd service or PM2 / SysV in containers).
+7. Sets up Nginx reverse proxy with Cloudflare Real-IP restoration and Dual-Port SSL (80 + 443).
+8. Performs an active automated health check before completing.
 
 ---
 
-### Interactive Menu Options
+## 📖 Step-by-Step Installation Guide (Few Clicks)
 
-```
-* ------------------------------------------------------------------------- *
-*             VPS PANEL - Cloud & Virtualization Orchestrator               *
-*                 Fast 1-Click Pterodactyl-Style Installer                  *
-* ------------------------------------------------------------------------- *
-Select what you would like to install:
+### Step 1: Point Your Domain via Cloudflare DNS
+1. Open your **Cloudflare Dashboard** -> Select your Domain -> **DNS**.
+2. Click **Add Record**:
+   - **Type**: `A`
+   - **Name**: `panel` (or `@` for root, e.g. `vps.yourdomain.com`)
+   - **IPv4 Address**: Your VPS Public IP
+   - **Proxy Status**: Proxied (Orange Cloud) or DNS Only (Grey Cloud) — *both are fully supported!*
+3. Under **SSL/TLS**: Ensure Encryption Mode is set to **Full** or **Flexible**.
 
-  [0] Install Master Panel (Controller API + Modern Web Dashboard)
-  [1] Install Worker Node Daemon (Hypervisor agent for Docker/KVM)
-  [2] Install Standalone [Both 0 and 1] (Panel + Local Hypervisor on this VPS)
-  [3] Configure Cloudflare Domain & Nginx SSL
-  [4] Exit
-```
-
-### Direct Non-Interactive CLI Commands
-
-#### Option 1: Master Panel (Controller + Admin Dashboard)
+### Step 2: Run the Installer on Your VPS
+Connect to your VPS via SSH and run:
 ```bash
-curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --panel
+bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) panel.yourdomain.com
 ```
+*(Replace `panel.yourdomain.com` with your actual domain).*
 
-#### Option 2: Worker Node Agent (Connect external VPS to cluster)
-```bash
-curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --agent --panel-url http://<PANEL_IP>:4000 --token <JOIN_TOKEN> --driver docker
-```
-
-#### Option 3: Full Standalone (Panel + Local Worker on 1 Server)
-```bash
-curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --standalone
-```
-
-#### Option 4: Configure Cloudflare Custom Domain & SSL
-```bash
-# Via Nginx Reverse Proxy with Cloudflare Real-IP & SSL
-curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --domain panel.yourdomain.com
-
-# Or via Cloudflare Zero Trust Tunnel (zero open ports needed)
-curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh | bash -s -- --cf-tunnel <YOUR_TUNNEL_TOKEN>
-```
+### Step 3: Log In to the Admin Dashboard
+Open `https://panel.yourdomain.com` in your web browser:
+- **Default Email**: `admin@vpspanel.local`
+- **Default Password**: `admin123`
+*(You can change your password immediately in Users & Roles).*
 
 ---
 
-## 🚀 Key Features
+## 🌐 Public Use & Self-Service Configuration
 
-- **Multi-Node Cluster Architecture**: Seamlessly connect unlimited remote Linux hypervisors to a single master controller.
-- **Interactive Web Terminal (xterm.js)**: Direct in-browser serial/pty shell for every VPS instance with full ANSI colors, resize negotiation, and Ctrl+C interrupt support.
-- **Hybrid Hypervisor Drivers**:
-  - `DockerDriver`: High-density system containers with CPU and memory cgroup quotas.
-  - `KvmDriver`: Full hardware virtualization via QEMU-KVM & Libvirt.
-  - `MockDriver`: Zero-dependency simulated hypervisor with an interactive pseudo-shell for testing and staging.
-- **Intelligent Auto-Scheduler**: Automatically places new VPS instances on the least-loaded worker node in the cluster.
-- **IPAM (IP Address Management)**: Built-in IPv4/IPv6 pool manager, subnets, automatic IP allocation, and release on termination.
-- **OS Template Catalog**: Pre-configured distribution templates for Ubuntu 24.04, Ubuntu 22.04, Debian 12, Alpine Linux 3.20, Rocky Linux 9, Arch Linux, and custom images.
-- **Live Hardware Telemetry**: Real-time CPU, RAM, and Disk allocation gauges and node heartbeat monitoring.
-- **Role-Based Access Control (RBAC)**: Super Admin vs Client User self-service portal.
-- **Security & Audit Logs**: Detailed tracking of all cluster operations, logins, and power cycles.
+VPS Panel is designed for both private clusters and public hosting providers. You can easily enable or disable public access directly from the web interface without touching terminal files:
+
+1. Log in to the Admin Dashboard and click **Settings & License** in the sidebar.
+2. Toggle any of the following self-service options:
+   - **Public User Registration**: Allow new visitors to click *Create Account* and sign up.
+   - **Client VPS Deployment**: Allow registered users to create and launch their own VPS instances.
+   - **Client Power Controls**: Allow users to Start, Stop, and Restart their own VPS instances.
+   - **Max VPS Quota per User**: Configure how many instances each client user can deploy.
+3. Click **Save Panel Branding & Settings**.
 
 ---
 
-## 🏗️ Architecture
+## 🎨 Easy Branding & Customization
 
-```
-                      +------------------------------------------+
-                      |         Web Browser (Admin / User)        |
-                      +------------------------------------------+
-                                    |                ^
-                        REST API    |                | WebSocket Console (xterm.js)
-                                    v                |
-        +----------------------------------------------------------------------+
-        |                    MASTER CONTROLLER (apps/server)                   |
-        |  - Express REST API (/api/*)                                         |
-        |  - WebSocket Hub (/ws/node, /ws/terminal)                            |
-        |  - Built-in SQLite Database (WAL mode)                               |
-        |  - Built-in React SPA Frontend (apps/client/dist)                    |
-        +----------------------------------------------------------------------+
-                         |                                      |
-         Encrypted WS    | Heartbeats & Commands                |
-                         v                                      v
-    +------------------------------------+    +------------------------------------+
-    |      WORKER NODE 1 (Frankfurt)     |    |      WORKER NODE 2 (New York)      |
-    |      vps-panel-agent daemon        |    |      vps-panel-agent daemon        |
-    +------------------------------------+    +------------------------------------+
-    | Driver: Docker / LXC               |    | Driver: KVM / Libvirt              |
-    |  - VPS Container 1 (Ubuntu 24.04)   |    |  - VPS VM 1 (Debian 12)            |
-    |  - VPS Container 2 (Alpine 3.20)   |    |  - VPS VM 2 (Rocky Linux 9)        |
-    +------------------------------------+    +------------------------------------+
-```
+You can customize the panel's appearance right from the browser:
+- **Panel Title**: Rename from default to your own brand (e.g. *Lunar VPS Panel*).
+- **Company Name**: Set your hosting organization name.
+- **Support / Discord URL**: Add your community support link.
+- **Custom Logo URL**: Provide your company logo image or icon.
+- **Default Hypervisor**: Choose Docker containers, KVM hardware virtualization, or Mock.
 
 ---
 
-## 🔐 Default Credentials
+## 🖥️ Connecting Worker Hypervisor Nodes
 
-After initial installation and database seeding:
+Connect unlimited external Linux machines to your panel cluster:
 
-| Role | Email | Password |
-|---|---|---|
-| **Super Administrator** | `admin@vpspanel.local` | `admin123` |
-| **Client User (Demo)** | `user@vpspanel.local` | `user123` |
-
-> ⚠️ **Important**: Please change the default password immediately in production!
-
----
-
-## 📂 Repository Structure
-
-```
-vps-panel/
-├── install.sh                  # Universal 1-click Linux installation script
-├── package.json                # Monorepo root scripts
-├── apps/
-│   ├── server/                 # Master Controller Backend
-│   │   ├── src/
-│   │   │   ├── index.ts        # Express & WebSocket server entrypoint
-│   │   │   ├── config.ts       # Server configuration & environment
-│   │   │   ├── db/             # SQLite engine & database migrations
-│   │   │   ├── routes/         # REST API routes (auth, nodes, vps, ipam, logs)
-│   │   │   ├── ws/hub.ts       # Node clustering & xterm console proxy hub
-│   │   │   └── middleware/     # JWT authentication & admin security
-│   │   └── package.json
-│   ├── client/                 # Modern React Admin Dashboard
-│   │   ├── src/
-│   │   │   ├── components/     # TerminalModal, CreateVpsModal, AddNodeModal, Sidebar
-│   │   │   ├── pages/          # Dashboard, Nodes, VpsList, Ipam, Templates, Logs
-│   │   │   └── api/            # Authenticated API client
-│   │   └── package.json
-│   └── agent/                  # Worker Node Hypervisor Agent
-│       ├── src/
-│       │   ├── index.ts        # Agent daemon service entrypoint
-│       │   ├── agent.ts        # WebSocket cluster connector & command runner
-│       │   ├── drivers/        # Hybrid hypervisor drivers (Docker, KVM, Mock)
-│       │   └── metrics.ts      # Host CPU, RAM, Disk, and container stats
-│       └── package.json
-```
-
----
-
-## 🛠️ Local Development & Testing
-
-### 1. Install Dependencies
+1. Go to **Nodes** in your panel dashboard.
+2. Click **Add Worker Node** and generate a Join Token.
+3. On your remote worker server, run:
 ```bash
-# Server
-cd apps/server && npm install
-
-# Client
-cd ../client && npm install
-
-# Agent
-cd ../agent && npm install
+bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) --node
 ```
-
-### 2. Run in Development Mode
-In separate terminal windows:
-```bash
-# Terminal 1: Master Server (Port 4000)
-cd apps/server
-npm run dev
-
-# Terminal 2: Client UI (Vite Dev Server on Port 3000)
-cd apps/client
-npm run dev
-
-# Terminal 3: Worker Node Agent (Connects to ws://localhost:4000)
-cd apps/agent
-npm run dev
-```
+4. Enter your Master Panel URL and Join Token. The node will automatically connect and stream live hardware telemetry!
 
 ---
 
-## 🛡️ Production Deployment with Nginx & SSL
+## 🔑 Licensing System
 
-To run the Master Panel behind Nginx with automatic HTTPS (Let's Encrypt):
-
-### 1. Nginx Configuration (`/etc/nginx/sites-available/panel.conf`)
-```nginx
-server {
-    listen 80;
-    server_name panel.yourdomain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:4000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-### 2. Enable & Obtain SSL
-```bash
-ln -s /etc/nginx/sites-available/panel.conf /etc/nginx/sites-enabled/
-certbot --nginx -d panel.yourdomain.com
-systemctl restart nginx
-```
+VPS Panel includes a flexible licensing engine:
+- **30-Day Pro Tier**: Fully functional evaluation tier with unlimited nodes and VPS instances.
+- **Lifetime Enterprise Tier**: Permanent, unrestricted tier with priority badge.
+- Pre-activated trial access is enabled upon initial installation.
+- Tiers can be managed or updated anytime in the panel under **Settings & License**.
 
 ---
 
-## 🤝 Contributing
+## 🛠️ Service Management Commands
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+```bash
+# Check service status (Systemd or Container/PM2)
+service vps-panel status   # or: pm2 status / systemctl status vps-panel
+
+# View live backend logs
+service vps-panel logs     # or: pm2 logs vps-panel / journalctl -u vps-panel -f
+
+# Restart the panel
+service vps-panel restart  # or: pm2 restart vps-panel
+
+# Restart Nginx web server
+service nginx restart
+```
 
 ---
 
 ## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is open-source under the MIT License.
