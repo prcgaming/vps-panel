@@ -113,21 +113,55 @@ VPS Panel includes a flexible licensing engine:
 
 ---
 
-## 🛠️ Service Management Commands
+## ⚡ 1-Click In-Panel Update (Web UI)
+
+You can update the VPS Panel directly from your web browser with zero terminal commands:
+1. Log in to the Admin Dashboard and navigate to **Settings & License** in the sidebar.
+2. Scroll to the **Panel Updates & Maintenance** section.
+3. Click **Check for Updates** to see the current version and sync status with GitHub `main`.
+4. Click **⚡ 1-Click Update Now**:
+   - The server will safely preserve your SQLite database, configurations, and active VPS instances.
+   - It downloads the latest pre-built release and reloads the services automatically in the background.
+   - Your browser page will refresh in ~6 seconds with the latest update live!
+
+---
+
+## 💻 Unified `vps-panel` CLI Command
+
+The installer automatically installs a global binary `vps-panel` to your VPS system PATH (`/usr/local/bin/vps-panel`). You can perform any management action with a single command:
 
 ```bash
-# Check service status (Systemd or Container/PM2)
-service vps-panel status   # or: pm2 status / systemctl status vps-panel
+# Update panel to newest GitHub release
+vps-panel update
+
+# Check live service status & health check
+vps-panel status
 
 # View live backend logs
-service vps-panel logs     # or: pm2 logs vps-panel / journalctl -u vps-panel -f
+vps-panel logs
 
-# Restart the panel
-service vps-panel restart  # or: pm2 restart vps-panel
+# Restart Master Panel and Nginx web server
+vps-panel restart
 
-# Restart Nginx web server
-service nginx restart
+# Stop panel services
+vps-panel stop
+
+# Start panel services
+vps-panel start
+
+# Install or reconfigure panel for a domain
+vps-panel install panel.yourdomain.com
+
+# Cleanly uninstall panel (includes automated database backup)
+vps-panel uninstall
 ```
+
+> **Tip:** You can also run any subcommand directly via curl without installing:
+> ```bash
+> bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) update
+> bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) status
+> bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) restart
+> ```
 
 ---
 

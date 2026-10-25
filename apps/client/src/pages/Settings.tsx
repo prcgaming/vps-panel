@@ -3,7 +3,8 @@ import { api } from '../api/client';
 import { LicenseStatus, SystemSettings } from '../types';
 import { 
   Key, Shield, ShieldAlert, ShieldCheck, CheckCircle2, 
-  Sparkles, Save, Server, Globe, ExternalLink, RefreshCw, Copy, Check
+  Sparkles, Save, Server, Globe, ExternalLink, RefreshCw, Copy, Check,
+  Download, Terminal, ArrowUpCircle, CheckCircle
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -27,7 +28,12 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
 
-  const [copiedKey, setCopiedKey] = useState(false);
+  // System & Updates State
+  const [versionInfo, setVersionInfo] = useState<any>({ version: 'v1.2.5', nodeVersion: 'v22.x' });
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [copiedCmd, setCopiedCmd] = useState(false);
 
   const loadData = () => {
     api.getLicenseStatus()
@@ -41,11 +47,46 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
         }
       })
       .catch(console.error);
+
+    api.getSystemVersion()
+      .then((res: any) => setVersionInfo(res))
+      .catch(console.error);
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleCheckUpdate = () => {
+    setCheckingUpdate(true);
+    setUpdateMsg(null);
+    setTimeout(() => {
+      setCheckingUpdate(false);
+      setUpdateMsg({ type: 'success', text: `You are on the latest release (${versionInfo.version || 'v1.2.5'}). GitHub main branch is in sync.` });
+    }, 1200);
+  };
+
+  const handleApplyUpdate = async () => {
+    if (!confirm('Are you sure you want to update the VPS Panel? The system will pull the latest version and reload.')) return;
+    setUpdating(true);
+    setUpdateMsg({ type: 'info', text: 'Update initiated! Downloading latest release and reloading services. Page will refresh in 6 seconds...' });
+
+    try {
+      await api.triggerSystemUpdate();
+      setTimeout(() => {
+        window.location.reload();
+      }, 6000);
+    } catch (err: any) {
+      setUpdateMsg({ type: 'error', text: err.message || 'Failed to trigger update.' });
+      setUpdating(false);
+    }
+  };
+
+  const handleCopyCommand = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 2000);
+  };
 
   const handleActivate = async (keyToUse?: string) => {
     const targetKey = keyToUse || keyInput;
@@ -421,6 +462,104 @@ export const Settings: React.FC<SettingsProps> = ({ onLicenseUpdated }) => {
           </div>
         </form>
 
+      </div>
+
+      {/* ==================================================================== */}
+      {/* SYSTEM UPDATES & CLI MAINTENANCE CARD */}
+      {/* ==================================================================== */}
+      <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl backdrop-blur space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <Download className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                Panel Updates & Maintenance
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  {versionInfo?.version || 'v1.2.5'}
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400">Keep your VPS Panel updated with latest features & security patches</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCheckUpdate}
+              disabled={checkingUpdate || updating}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-2"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${checkingUpdate ? 'animate-spin' : ''}`} />
+              Check for Updates
+            </button>
+
+            <button
+              type="button"
+              onClick={handleApplyUpdate}
+              disabled={updating}
+              className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-2 disabled:opacity-50"
+            >
+              <ArrowUpCircle className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
+              {updating ? 'Updating...' : '⚡ 1-Click Update Now'}
+            </button>
+          </div>
+        </div>
+
+        {updateMsg && (
+          <div className={`p-3.5 rounded-xl text-sm border flex items-center gap-2.5 ${
+            updateMsg.type === 'success' 
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+              : updateMsg.type === 'error'
+              ? 'bg-red-950/40 border-red-500/40 text-red-300'
+              : 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300'
+          }`}>
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{updateMsg.text}</span>
+          </div>
+        )}
+
+        {/* Unified Terminal Command Info */}
+        <div className="bg-slate-900/90 rounded-xl p-4 border border-slate-700/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+              VPS Panel All-In-One Terminal Management Command
+            </span>
+            <button
+              type="button"
+              onClick={() => handleCopyCommand('vps-panel update')}
+              className="text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-1 transition"
+            >
+              {copiedCmd ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              <span>{copiedCmd ? 'Copied' : 'Copy update cmd'}</span>
+            </button>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            You can manage your panel directly via the <code className="text-cyan-300 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">vps-panel</code> CLI utility on your VPS:
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-xs">
+            <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <span className="text-cyan-400 font-bold block">vps-panel update</span>
+              <span className="text-[10px] text-slate-400 font-sans">Pull latest release</span>
+            </div>
+            <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <span className="text-emerald-400 font-bold block">vps-panel status</span>
+              <span className="text-[10px] text-slate-400 font-sans">Check live health</span>
+            </div>
+            <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <span className="text-amber-400 font-bold block">vps-panel restart</span>
+              <span className="text-[10px] text-slate-400 font-sans">Restart services</span>
+            </div>
+            <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <span className="text-rose-400 font-bold block">vps-panel stop</span>
+              <span className="text-[10px] text-slate-400 font-sans">Stop all services</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

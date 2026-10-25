@@ -78,4 +78,8 @@ export const api = {
   getSettings: () => apiRequest('/settings'),
   updateSettings: (settings: any) =>
     apiRequest('/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
+
+  // System & Update
+  getSystemVersion: () => apiRequest('/system/version'),
+  triggerSystemUpdate: () => apiRequest('/system/update', { method: 'POST' }),
 };
