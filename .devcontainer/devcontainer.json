@@ -17,7 +17,8 @@
       "onAutoForward": "silent"
     }
   },
-  "postCreateCommand": "npm run install:all && cd apps/client && npm run build && cd ../server && npm run seed",
+  "postCreateCommand": "npm run install:all && npm run build && npm run --prefix apps/server seed",
+  "postStartCommand": "npm start",
   "customizations": {
     "vscode": {
       "extensions": [

@@ -123,9 +123,8 @@ setup_repository() {
   
   # If running from inside the cloned folder itself
   if [ -f "./apps/server/package.json" ]; then
-    echo -e "${BLUE}[INFO] Installing from current directory source...${NC}"
-    mkdir -p "$INSTALL_DIR"
-    cp -r ./* "$INSTALL_DIR/" 2>/dev/null || true
+    INSTALL_DIR="$(pwd)"
+    echo -e "${BLUE}[INFO] Installing directly from current repository: ${INSTALL_DIR}${NC}"
   elif [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
     echo -e "${BLUE}[INFO] Downloading repository files from GitHub to ${INSTALL_DIR}...${NC}"
     rm -rf "$INSTALL_DIR" 2>/dev/null || true
