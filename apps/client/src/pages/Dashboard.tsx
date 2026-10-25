@@ -13,6 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { api } from '../api/client';
+import { useTheme } from '../context/ThemeContext';
 import { ClusterStats, VpsInstance, Node } from '../types';
 
 interface DashboardProps {
@@ -22,6 +23,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreateVps, onNavigateTab }) => {
+  const { currentTheme } = useTheme();
   const [stats, setStats] = useState<ClusterStats | null>(null);
   const [vpsList, setVpsList] = useState<VpsInstance[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -58,7 +60,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreat
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenCreateVps}
-            className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-500/20 transition"
+            className={`px-4 py-2 ${currentTheme.btnPrimary} text-white text-xs font-semibold rounded-xl transition`}
           >
             Deploy New VPS
           </button>

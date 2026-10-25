@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Cpu, HardDrive, Shield, Server, Check, Layers, Sparkles } from 'lucide-react';
 import { api } from '../api/client';
+import { useTheme } from '../context/ThemeContext';
 import { Node, OsTemplate } from '../types';
 
 interface CreateVpsModalProps {
@@ -9,6 +10,7 @@ interface CreateVpsModalProps {
 }
 
 export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreated }) => {
+  const { currentTheme } = useTheme();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [templates, setTemplates] = useState<OsTemplate[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -338,7 +340,7 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-sm font-medium rounded-xl shadow-lg shadow-cyan-500/20 transition disabled:opacity-50"
+              className={`px-6 py-2 ${currentTheme.btnPrimary} text-white text-sm font-medium rounded-xl transition disabled:opacity-50`}
             >
               {submitting ? 'Provisioning VPS...' : 'Deploy VPS Now'}
             </button>

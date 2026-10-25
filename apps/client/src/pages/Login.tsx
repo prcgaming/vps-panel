@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Server, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, Sparkles, Orbit } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
+  const { currentTheme } = useTheme();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('admin@vpspanel.local');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [panelName, setPanelName] = useState('Lunar VPS Panel');
@@ -56,9 +58,15 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#070a12] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Background Neon Gradients & Glows */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-cyan-600/15 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-600/15 rounded-full blur-[120px] pointer-events-none" />
+      {/* Dynamic Background Neon Gradients & Glows based on Theme */}
+      <div 
+        className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-[130px] pointer-events-none opacity-40 transition-colors duration-700"
+        style={{ backgroundColor: currentTheme.primaryColor }}
+      />
+      <div 
+        className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full blur-[130px] pointer-events-none opacity-30 transition-colors duration-700"
+        style={{ backgroundColor: currentTheme.secondaryColor }}
+      />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Grid Pattern Overlay */}
@@ -68,14 +76,19 @@ export const Login: React.FC = () => {
         
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex relative items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 shadow-2xl shadow-cyan-500/25 text-white mb-4 p-0.5">
+          <div 
+            className={`inline-flex relative items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr ${currentTheme.previewGradient} shadow-2xl text-white mb-4 p-0.5`}
+            style={{ boxShadow: `0 12px 30px -4px ${currentTheme.glowColor}` }}
+          >
             <div className="w-full h-full bg-[#070a12]/80 backdrop-blur-md rounded-2xl flex items-center justify-center">
-              <Orbit className="w-8 h-8 text-cyan-400 animate-[spin_12s_linear_infinite]" />
+              <Orbit className={`w-8 h-8 ${currentTheme.textAccent} animate-[spin_12s_linear_infinite]`} />
             </div>
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight flex items-center justify-center gap-2">
             {panelName}
-            <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">Cloud</span>
+            <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full ${currentTheme.bgBadge} font-bold`}>
+              Cloud
+            </span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">Multi-Node Virtualization & Cloud Control Center</p>
         </div>
@@ -90,7 +103,7 @@ export const Login: React.FC = () => {
               onClick={() => { setIsRegister(false); setError(''); }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${
                 !isRegister 
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/20' 
+                  ? `${currentTheme.btnPrimary}` 
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -108,7 +121,7 @@ export const Login: React.FC = () => {
               }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${
                 isRegister 
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/20' 
+                  ? `${currentTheme.btnPrimary}` 
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -136,8 +149,8 @@ export const Login: React.FC = () => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+                    placeholder="Enter your name"
+                    className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none ${currentTheme.ringFocus} transition`}
                   />
                 </div>
               </div>
@@ -154,8 +167,8 @@ export const Login: React.FC = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={isRegister ? "name@example.com" : "admin@vpspanel.local"}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+                  placeholder="name@example.com"
+                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none ${currentTheme.ringFocus} transition`}
                 />
               </div>
             </div>
@@ -173,7 +186,7 @@ export const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none ${currentTheme.ringFocus} transition`}
                 />
               </div>
             </div>
@@ -181,7 +194,7 @@ export const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-xl shadow-cyan-500/20 transition flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
+              className={`w-full mt-2 py-3 ${currentTheme.btnPrimary} font-semibold rounded-xl transition flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer`}
             >
               <span>{loading ? (isRegister ? 'Creating Account...' : 'Authenticating...') : (isRegister ? 'Register & Get Started' : 'Sign In to Panel')}</span>
               <ArrowRight className="w-4 h-4" />

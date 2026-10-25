@@ -4,7 +4,7 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
-const CURRENT_VERSION = 'v1.2.5';
+const CURRENT_VERSION = 'v1.3.0';
 
 // GET /api/system/version - Return panel version and system telemetry
 router.get('/version', (req: Request, res: Response) => {

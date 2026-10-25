@@ -14,6 +14,7 @@ import {
   Orbit
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { api } from '../api/client';
 
 interface SidebarProps {
@@ -23,6 +24,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) => {
   const { user, logout } = useAuth();
+  const { currentTheme } = useTheme();
   const [panelName, setPanelName] = React.useState('VPS Panel');
   const [logoUrl, setLogoUrl] = React.useState('');
 
@@ -57,15 +59,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
           {logoUrl ? (
             <img src={logoUrl} alt="Logo" className="w-9 h-9 rounded-xl object-contain bg-slate-900 border border-slate-700 p-1" />
           ) : (
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-black text-lg">
-              <Orbit className="w-5 h-5 text-cyan-200" />
+            <div 
+              className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${currentTheme.previewGradient} flex items-center justify-center shadow-lg text-white font-black text-lg`}
+              style={{ boxShadow: `0 8px 20px -4px ${currentTheme.glowColor}` }}
+            >
+              <Orbit className="w-5 h-5 text-white/90" />
             </div>
           )}
           <div className="overflow-hidden">
             <h1 className="font-bold text-slate-100 text-sm leading-tight tracking-tight truncate">
               {panelName}
             </h1>
-            <p className="text-[10px] text-cyan-400 font-mono">Cloud Orchestrator</p>
+            <p className={`text-[10px] font-mono ${currentTheme.textAccent}`}>Cloud Orchestrator</p>
           </div>
         </div>
 
@@ -83,12 +88,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
                 onClick={() => setCurrentTab(item.id)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
                   isActive
-                    ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-300 border border-cyan-500/20 shadow-sm'
+                    ? `${currentTheme.navActive} shadow-sm`
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? currentTheme.textAccent : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
@@ -106,7 +111,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       <div className="p-4 border-t border-slate-800/80">
         <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
+            <div 
+              className={`w-8 h-8 rounded-lg bg-gradient-to-br ${currentTheme.previewGradient} text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-sm`}
+            >
               {user?.name?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="overflow-hidden">

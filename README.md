@@ -26,15 +26,18 @@ If your domain is already pointed to your VPS via Cloudflare:
 bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) panel.yourdomain.com
 ```
 
-This single command:
+The installer provides an interactive setup wizard that configures everything with **100% real infrastructure (zero fake/mock things)**:
 1. Detects your operating system and environment (Systemd, Docker, or LXC container).
 2. Automatically creates a 2GB swap file on low-memory VPS.
 3. Automatically installs or upgrades to **Node.js 22 LTS** (Active LTS).
-4. Downloads and extracts the pre-built panel files instantly.
-5. Sets up the SQLite database and initializes administrator credentials.
-6. Configures background process management (Systemd service or PM2 / SysV in containers).
-7. Sets up Nginx reverse proxy with Cloudflare Real-IP restoration and Dual-Port SSL (80 + 443).
-8. Performs an active automated health check before completing.
+4. Interactively configures your domain, panel brand title, super admin credentials, and color theme.
+5. Installs the official **Docker Engine** and pre-pulls base OS images (`alpine:3.20`, `debian:12-slim`, `ubuntu:24.04`).
+6. Configures the host machine as an active **Local Hypervisor Node** and launches the worker daemon.
+7. Sets up the SQLite database and initializes real administrator credentials.
+8. Configures background process management (Systemd service or PM2 / SysV in containers).
+9. Sets up Nginx reverse proxy with Cloudflare Real-IP restoration and Dual-Port SSL (80 + 443).
+10. Installs the global `vps-panel` CLI utility to `/usr/local/bin/vps-panel`.
+11. Performs active automated health checks before completing.
 
 ---
 
@@ -75,6 +78,28 @@ VPS Panel is designed for both private clusters and public hosting providers. Yo
    - **Client Power Controls**: Allow users to Start, Stop, and Restart their own VPS instances.
    - **Max VPS Quota per User**: Configure how many instances each client user can deploy.
 3. Click **Save Panel Branding & Settings**.
+
+---
+
+## 🎨 8 High-Tech Color Theme Presets
+
+VPS Panel includes 8 futuristic cyberpunk and modern enterprise theme presets that dynamically change all buttons, glows, glassmorphism borders, badges, and terminal highlights:
+
+| Theme Preset | Color Scheme | Style Description |
+|---|---|---|
+| **Cyber Cyan** *(Default)* | Electric Cyan (`#06b6d4`) & Deep Blue (`#3b82f6`) | Lunar high-tech cyber aesthetic with electric cyan glow |
+| **Purple Nebula** | Cosmic Violet (`#a855f7`) & Synthwave Magenta (`#ec4899`) | Deep space interstellar purple with vibrant neon blooms |
+| **Emerald Matrix** | Hacker Green (`#10b981`) & Phosphor Teal (`#14b8a6`) | Cybersecurity terminal green inspired by classic mainframe consoles |
+| **Crimson Blood** | Ruby Crimson (`#ef4444`) & Fiery Rose (`#f43f5e`) | High-contrast blood red with aggressive dark-mode accents |
+| **Golden Amber** | Solar Flare Gold (`#f59e0b`) & Sunset Orange (`#ea580c`) | Warm molten solar gold and rich amber radiance |
+| **Rose Sakura** | Synthwave Pink (`#f43f5e`) & Radiant Fuchsia (`#d946ef`) | Anime cyberpunk neon pink with electric violet highlights |
+| **Electric Indigo** | Deep Space Indigo (`#6366f1`) & Royal Violet (`#8b5cf6`) | Ultra-clean modern enterprise indigo and royal purple |
+| **Midnight Stealth** | Industrial Carbon (`#94a3b8`) & Monochrome Steel (`#64748b`) | Minimalist monochrome dark stealth with crisp steel contours |
+
+### How to Switch Themes:
+- **Navbar Quick Picker**: Click the **Palette** icon in the top header to preview and change themes in real time with 1 click.
+- **Settings Page**: Go to **Settings & License** -> **Color Theme Presets** -> Click **Set as System Default Theme** to make your favorite theme the default for the entire cluster and login screen.
+- **During Installation**: The interactive setup wizard lets you select your preferred color theme right from the terminal.
 
 ---
 

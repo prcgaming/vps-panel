@@ -1,9 +1,10 @@
 import bcrypt from 'bcryptjs';
+import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import { db, initDatabase } from './index.js';
 export function seedDatabase() {
     initDatabase();
-    // 1. Seed Users
+    // 1. Seed Users (Super Admin & Demo Client)
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@vpspanel.local';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
     const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
@@ -18,15 +19,15 @@ export function seedDatabase() {
       INSERT INTO users (id, email, password_hash, role, name)
       VALUES (?, ?, ?, ?, ?)
     `).run('user-demo-client', 'user@vpspanel.local', userPass, 'user', 'Client User');
-        console.log(`[Seed] Users created: ${adminEmail} (${adminPassword}), user@vpspanel.local (user123)`);
+        console.log(`[Seed] Super Admin user created: ${adminEmail}`);
     }
-    // 2. Seed OS Templates
+    // 2. Seed Standard OS Templates (Docker & Hypervisor base images)
     const templateCount = db.prepare('SELECT COUNT(*) as c FROM os_templates').get().c;
     if (templateCount === 0) {
         const templates = [
             {
                 id: 'tmpl-ubuntu-2404',
-                name: 'Ubuntu 24.04 LTS',
+                name: 'Ubuntu 24.04 LTS (Noble)',
                 distro: 'Ubuntu',
                 version: '24.04',
                 image_ref: 'ubuntu:24.04',
@@ -37,7 +38,7 @@ export function seedDatabase() {
             },
             {
                 id: 'tmpl-ubuntu-2204',
-                name: 'Ubuntu 22.04 LTS',
+                name: 'Ubuntu 22.04 LTS (Jammy)',
                 distro: 'Ubuntu',
                 version: '22.04',
                 image_ref: 'ubuntu:22.04',
@@ -59,7 +60,7 @@ export function seedDatabase() {
             },
             {
                 id: 'tmpl-alpine-320',
-                name: 'Alpine Linux 3.20',
+                name: 'Alpine Linux 3.20 (Ultra Lightweight)',
                 distro: 'Alpine',
                 version: '3.20',
                 image_ref: 'alpine:3.20',
@@ -70,7 +71,7 @@ export function seedDatabase() {
             },
             {
                 id: 'tmpl-rocky-9',
-                name: 'Rocky Linux 9',
+                name: 'Rocky Linux 9 (Enterprise RHEL)',
                 distro: 'Rocky',
                 version: '9',
                 image_ref: 'rockylinux:9',
@@ -81,7 +82,7 @@ export function seedDatabase() {
             },
             {
                 id: 'tmpl-arch',
-                name: 'Arch Linux (Rolling)',
+                name: 'Arch Linux (Rolling Release)',
                 distro: 'Arch',
                 version: 'latest',
                 image_ref: 'archlinux:latest',
@@ -98,58 +99,53 @@ export function seedDatabase() {
         for (const t of templates) {
             insertTemplate.run(t.id, t.name, t.distro, t.version, t.image_ref, t.min_ram_mb, t.min_disk_gb, t.default_user, t.icon);
         }
-        console.log('[Seed] OS Templates populated');
+        console.log('[Seed] OS Templates seeded successfully');
     }
-    // 3. Seed IP Pool
+    // 3. Seed IPAM Default Pool & Allocations
     const poolCount = db.prepare('SELECT COUNT(*) as c FROM ip_pools').get().c;
     if (poolCount === 0) {
-        const poolId = 'pool-public-1';
+        const poolId = 'pool-default-ipv4';
         db.prepare(`
       INSERT INTO ip_pools (id, name, subnet, gateway, netmask, dns, type)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(poolId, 'Primary Public IPv4 Pool', '198.51.100.0/24', '198.51.100.1', '255.255.255.0', '1.1.1.1, 8.8.8.8', 'public_ipv4');
+    `).run(poolId, 'Default Public Pool', '10.0.0.0/24', '10.0.0.1', '255.255.255.0', '1.1.1.1, 8.8.8.8', 'public_ipv4');
         const insertIp = db.prepare(`
       INSERT INTO ip_allocations (id, pool_id, ip_address, is_reserved)
       VALUES (?, ?, ?, ?)
     `);
-        // Pre-populate pool with 10 usable IPs
-        for (let i = 10; i <= 25; i++) {
-            insertIp.run(`ip-${i}`, poolId, `198.51.100.${i}`, 0);
+        // Pre-populate pool with usable IPs
+        for (let i = 10; i <= 50; i++) {
+            insertIp.run(`ip-${i}`, poolId, `10.0.0.${i}`, 0);
         }
-        console.log('[Seed] IP Pool and Subnet allocations created');
+        console.log('[Seed] IP Pool (10.0.0.0/24) created with 41 usable IP allocations');
     }
-    // 4. Seed Initial Node
+    // 4. Seed Real Local Host Node (No fake Frankfurt or New York dummy nodes!)
     const nodeCount = db.prepare('SELECT COUNT(*) as c FROM nodes').get().c;
     if (nodeCount === 0) {
+        const hostCpuCount = os.cpus()?.length || 4;
+        const hostRamTotalMb = Math.round(os.totalmem() / (1024 * 1024)) || 8192;
+        const hostName = os.hostname() || 'master-node';
+        const localToken = process.env.NODE_TOKEN || 'local-node-master-token';
+        const serverPublicIp = process.env.PUBLIC_IP || '127.0.0.1';
+        const selectedDriver = process.env.DRIVER || 'docker';
         db.prepare(`
       INSERT INTO nodes (id, name, hostname, ip_address, port, auth_token, status, driver, cpu_cores, ram_total, disk_total, vps_count, is_drained)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('node-eu-central-1', 'Node-01-Frankfurt', 'fra-hv-01.vpspanel.local', '198.51.100.2', 4001, 'token-node-eu-01-secret', 'online', 'docker', 16, 32768, 500, 1, 0);
-        db.prepare(`
-      INSERT INTO nodes (id, name, hostname, ip_address, port, auth_token, status, driver, cpu_cores, ram_total, disk_total, vps_count, is_drained)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('node-us-east-1', 'Node-02-NewYork', 'nyc-hv-02.vpspanel.local', '198.51.100.3', 4001, 'token-node-us-01-secret', 'online', 'kvm', 32, 65536, 1000, 0, 0);
-        // Seed a demo running VPS
-        db.prepare(`
-      INSERT INTO vps_instances (id, name, hostname, node_id, user_id, status, os_image, cpu_cores, ram_mb, disk_gb, ip_address, gateway, root_password)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('vps-demo-prod', 'web-server-prod', 'web01.example.com', 'node-eu-central-1', 'user-admin-root', 'running', 'ubuntu:24.04', 2, 2048, 40, '198.51.100.10', '198.51.100.1', 'RootSecret2026!');
-        // Mark IP as allocated
-        db.prepare(`UPDATE ip_allocations SET vps_id = ? WHERE ip_address = '198.51.100.10'`).run('vps-demo-prod');
-        // Add activity log
+    `).run('node-local-master', `Master-Node (${hostName})`, hostName, serverPublicIp, 4001, localToken, 'online', selectedDriver, hostCpuCount, hostRamTotalMb, 100, 0, 0);
         db.prepare(`
       INSERT INTO activity_logs (id, user_id, action, target_type, target_id, details, ip_address)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(uuidv4(), 'user-admin-root', 'cluster_initialized', 'cluster', 'cluster-root', 'Cluster initialized with default templates and Frankfurt/New York nodes', '127.0.0.1');
-        console.log('[Seed] Multi-node cluster and initial VPS instance seeded');
+    `).run(uuidv4(), 'user-admin-root', 'cluster_initialized', 'cluster', 'cluster-root', `Cluster initialized with real Local Node (${hostName}, ${hostCpuCount} vCPU, ${hostRamTotalMb}MB RAM)`, '127.0.0.1');
+        console.log(`[Seed] Real Local Node registered: Master-Node (${hostName}) [${hostCpuCount} Cores, ${hostRamTotalMb}MB RAM]`);
     }
-    // 6. Seed System Settings & Branding
+    // 5. Seed System Settings & Branding with Theme Presets
     const defaultSettings = {
-        panel_name: 'Lunar VPS Panel',
-        company_name: 'Lunar Cloud Infrastructure',
-        support_url: 'https://vps.lunars.indevs.in',
-        primary_color: '#06b6d4',
-        default_driver: 'docker',
+        panel_name: process.env.PANEL_NAME || 'Lunar VPS Panel',
+        company_name: process.env.COMPANY_NAME || 'Lunar Cloud Infrastructure',
+        support_url: process.env.SUPPORT_URL || 'https://vps.lunars.indevs.in',
+        primary_color: process.env.PRIMARY_COLOR || '#06b6d4',
+        theme_preset: process.env.THEME_PRESET || 'cyber-cyan',
+        default_driver: process.env.DRIVER || 'docker',
         welcome_message: 'Welcome to Lunar Multi-Node VPS Control Panel',
         allow_registration: '1',
         allow_user_create_vps: '1',
@@ -162,7 +158,7 @@ export function seedDatabase() {
       INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)
     `).run(key, val);
     }
-    // 7. Seed Initial License Key
+    // 6. Seed Initial License Key
     const activeLicense = db.prepare('SELECT id FROM license_info WHERE id = ?').get('active_license');
     if (!activeLicense) {
         const initialKey = process.env.LICENSE_KEY || 'LUNAR-30DAY-PRO-UNLIMITED';
@@ -173,7 +169,7 @@ export function seedDatabase() {
       INSERT INTO license_info (id, license_key, plan_type, status, activated_at, expires_at, max_nodes, max_vps, registered_to)
       VALUES ('active_license', ?, ?, 'active', ?, ?, -1, -1, 'Lunar Administrator')
     `).run(initialKey, isLifetime ? 'lifetime' : 'trial_30d', now.toISOString(), expiresAt);
-        console.log(`[Seed] Initial license activated: ${initialKey} (${isLifetime ? 'Lifetime' : '30 Days'})`);
+        console.log(`[Seed] License activated: ${initialKey} (${isLifetime ? 'Lifetime' : '30 Days'})`);
     }
 }
 // Allow standalone running
