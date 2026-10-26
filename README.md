@@ -64,6 +64,12 @@ If your panel domain (e.g. `vps.lunars.indevs.in`) is pointed to your VPS:
 bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) vps.lunars.indevs.in
 ```
 
+> 💡 **Public Website (y/n) Prompt:** During the setup wizard, the installer will ask:
+> ```text
+> Do you also want to install the public hosting website? [y/N]:
+> ```
+> If you select **`y`**, it will prompt for your root domain (e.g. `lunars.indevs.in`), configure Nginx, origin TLS SSL, and deploy the public hosting website linked directly to your Master Panel automatically!
+
 ---
 
 ## 🌐 How to Install the Public Hosting Website on Root Domain

@@ -684,6 +684,27 @@ install_panel() {
   read -r -p "Enter Panel Internal Port [4000]: " PORT_INPUT
   PANEL_PORT=${PORT_INPUT:-4000}
 
+  # 7. Public Hosting Website & Client Portal (Root Domain)
+  echo -e "\n${BOLD}Public Hosting Website / Client Portal:${NC}"
+  echo -e "  A modern public-facing cloud hosting landing page (apps/web) with live cluster"
+  echo -e "  telemetry, HVM pricing plans, and client login deep-links."
+  read -r -p "Do you also want to install the public hosting website? [y/N]: " INSTALL_WEB_CHOICE
+  INSTALL_WEB_CHOICE=$(echo "${INSTALL_WEB_CHOICE:-n}" | tr '[:upper:]' '[:lower:]')
+
+  if [[ "$INSTALL_WEB_CHOICE" =~ ^(y|yes)$ ]]; then
+    local default_web_domain="lunars.indevs.in"
+    if [ -n "$PANEL_DOMAIN" ]; then
+      if [[ "$PANEL_DOMAIN" =~ ^[^\.]+\.(.+\..+)$ ]]; then
+        default_web_domain="${BASH_REMATCH[1]}"
+      else
+        default_web_domain="$PANEL_DOMAIN"
+      fi
+    fi
+
+    read -r -p "Enter Domain for Website [$default_web_domain]: " WEB_DOMAIN_INPUT
+    INSTALL_WEB_DOMAIN=${WEB_DOMAIN_INPUT:-$default_web_domain}
+  fi
+
   install_dependencies
 
   # If KVM is chosen, install and prepare KVM & Libvirt packages
@@ -888,23 +909,34 @@ AGENTINITEOF
     FINAL_URL="http://${local_public_ip}:${PANEL_PORT}"
   fi
 
+  # Setup public hosting website if requested
+  local WEB_FINAL_URL=""
+  if [[ "$INSTALL_WEB_CHOICE" =~ ^(y|yes)$ ]] && [ -n "$INSTALL_WEB_DOMAIN" ]; then
+    setup_nginx_web_portal "$INSTALL_WEB_DOMAIN" "$FINAL_URL" "$PANEL_NAME"
+    WEB_FINAL_URL="https://${INSTALL_WEB_DOMAIN}"
+  fi
+
   # Install CLI utility
   install_cli_binary
 
   echo -e "\n${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}"
   echo -e "${GREEN}${BOLD}*  VPS PANEL INSTALLED SUCCESSFULLY! (100% REAL & OPERATIONAL)              *${NC}"
   echo -e "${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}"
-  echo -e "  ${CYAN}Panel Access URL:${NC}    ${BOLD}${FINAL_URL}${NC}"
+  echo -e "  ${CYAN}Master Panel URL:${NC}    ${BOLD}${FINAL_URL}${NC}"
+  if [ -n "$WEB_FINAL_URL" ]; then
+    echo -e "  ${CYAN}Public Website URL:${NC}  ${BOLD}${WEB_FINAL_URL}${NC} (Linked to Master Panel)"
+  fi
   echo -e "  ${CYAN}Admin Email:${NC}         ${BOLD}${ADMIN_EMAIL}${NC}"
   echo -e "  ${CYAN}Admin Password:${NC}      ${BOLD}${ADMIN_PASSWORD}${NC}"
   echo -e "  ${CYAN}Panel Title:${NC}         ${BOLD}${PANEL_NAME}${NC}"
   echo -e "  ${CYAN}Theme Preset:${NC}        ${BOLD}${THEME_PRESET}${NC} (${PRIMARY_COLOR})"
-  echo -e "  ${CYAN}Hypervisor Driver:${NC}   ${BOLD}${DRIVER}${NC}"
+  echo -e "  ${CYAN}Hypervisor Driver:${NC}   ${BOLD}${DRIVER} HVM Virtualization${NC}"
   echo -e "  ${CYAN}Local Worker Node:${NC}   ${GREEN}Active & Connected${NC}"
-  echo -e "  ${CYAN}License Status:${NC}      ${BOLD}Active (${LICENSE_KEY:0:15}...)${NC}"
+  echo -e "  ${CYAN}License Status:${NC}      ${BOLD}100% Free & Unlimited (Permanent)${NC}"
   echo -e "  ${PURPLE}Command Line Control:${NC}"
   echo -e "    ${CYAN}vps-panel status${NC}       Check service health"
   echo -e "    ${CYAN}vps-panel update${NC}       Update to latest version"
+  echo -e "    ${CYAN}vps-panel install-web${NC}  Deploy public website on root domain"
   echo -e "    ${CYAN}vps-panel restart${NC}      Restart panel and webserver"
   echo -e "    ${CYAN}vps-panel logs${NC}         Stream live backend logs"
   echo -e "${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}\n"
