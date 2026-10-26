@@ -59,19 +59,51 @@ Run this single command on your Linux VPS (supports **Ubuntu 20.04/22.04/24.04, 
 bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh)
 ```
 
-### ⚡ Express 1-Click Install with Domain
+### 🎯 Which Option to Choose When Running the Script?
 
-If your panel domain (e.g. `vps.lunars.indevs.in`) is pointed to your VPS:
+When you run the command, the installer displays an interactive numbered menu:
+
+```text
+Select what you would like to do:
+
+  [0] Install Complete VPS Panel (Panel + Local HVM Node - Ready to create VPS!)
+  [1] Install Worker Node Daemon Only (Connect an external server as a worker node)
+  [2] Install Public Hosting Website / Client Portal (Root domain e.g. lunars.indevs.in)
+  [3] Configure Cloudflare Domain & Nginx SSL for Panel
+  [4] Check Status & Health
+  [5] Update VPS Panel to Latest GitHub Release
+  [6] Restart Services
+  [7] View Realtime Logs
+  [8] Uninstall Panel
+  [9] Exit
+
+Input 0-9 [default: 0]:
+```
+
+👉 **Choose Option `[0]`** (or simply press **Enter**, as `0` is the default)!
+
+#### Step-by-Step Questions Answered in Option `0`:
+
+| Step / Prompt | What to Enter / Recommended Choice |
+|---|---|
+| **1. Domain Name** | Enter your panel subdomain (e.g. `vps.lunars.indevs.in`) or press Enter to use server IP. |
+| **2. Public Website `[y/N]`** | Type **`y`** if you want to deploy the public hosting website on your root domain (e.g. `lunars.indevs.in`), or **`N`** for panel only. |
+| **3. Brand Name** | Enter your hosting company or brand name (e.g. `Lunar Cloud HVM`). |
+| **4. Hypervisor Engine** | Choose **`1`** for **Dedicated HVM (KVM / QEMU)** (Supports Windows, Linux, Desktop GUI & Custom ISO). |
+| **5. Design Theme** | Choose your favorite starting theme preset (e.g. `1` for Cyber Cyan, `2` for Electric Indigo, `7` for OLED Black). |
+| **6. Admin Account** | Enter your **Admin Email** and **Password** for dashboard login. |
+
+The installer will then automatically install Node.js, KVM packages, build the panel, configure Nginx SSL, seed OS templates, and start all services!
+
+---
+
+### ⚡ Express 1-Click Install with Domain (Skips Menu)
+
+If you already have your domain pointed to your server's IP and want to skip the menu entirely:
 
 ```bash
 bash <(curl -sSL https://raw.githubusercontent.com/prcgaming/vps-panel/main/install.sh) vps.lunars.indevs.in
 ```
-
-> 💡 **Public Website (y/n) Prompt:** During the setup wizard, the installer will ask:
-> ```text
-> Do you also want to install the public hosting website? [y/N]:
-> ```
-> If you select **`y`**, it will prompt for your root domain (e.g. `lunars.indevs.in`), configure Nginx, origin TLS SSL, and deploy the public hosting website linked directly to your Master Panel automatically!
 
 ---
 
