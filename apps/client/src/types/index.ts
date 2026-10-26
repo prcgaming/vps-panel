@@ -37,6 +37,11 @@ export interface VpsInstance {
   user_id: string;
   status: 'running' | 'stopped' | 'creating' | 'rebuilding' | 'error';
   os_image: string;
+  os_type?: 'linux' | 'windows' | 'gui_desktop' | 'custom_iso';
+  iso_url?: string;
+  vnc_port?: number;
+  vnc_password?: string;
+  virt_type?: 'hvm' | 'container';
   cpu_cores: number;
   ram_mb: number;
   disk_gb: number;
@@ -103,6 +108,8 @@ export interface OsTemplate {
   distro: string;
   version: string;
   image_ref: string;
+  os_type?: 'linux' | 'windows' | 'gui_desktop' | 'custom_iso';
+  iso_url?: string;
   min_ram_mb: number;
   min_disk_gb: number;
   default_user: string;

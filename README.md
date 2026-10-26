@@ -14,6 +14,9 @@ A next-generation, high-performance **HVM (Hardware Virtual Machine)** and multi
 ## 🌟 Key Features
 
 - 🚀 **Dedicated HVM (Hardware Virtual Machine)**: Full hardware virtualization via KVM & QEMU with dedicated guest OS kernels, VirtIO bus acceleration, QCOW2 storage, swap memory, and support for Docker inside VPS, WireGuard VPNs, Linux, and Windows Server VMs.
+- 🪟 **Windows & Graphical Desktop Support**: Native support for **Windows Server 2022, Windows Server 2019, Windows 11 Pro**, as well as graphical desktop environments (Ubuntu Desktop GUI, Debian Desktop GUI) with out-of-the-box SATA storage and display drivers.
+- 💿 **Custom ISO Boot & Manual OS Install**: Mount any direct HTTP/HTTPS bootable `.iso` image as an IDE CD-ROM drive (`<boot dev='cdrom'/>`) to install your own customized distributions or proprietary operating systems.
+- 🖥️ **Dual-Mode Web Console (Serial xterm.js + Web VNC Display)**: Switch between high-speed serial terminal (`xterm.js`) and full graphical in-browser **Web VNC Display** with virtual mouse, keyboard injection, and essential Windows key combos (`Send Ctrl+Alt+Del`, `Win Key`, `Alt+Tab`).
 - ⚡ **Dual-Engine Hybrid Hypervisor**: Support for both dedicated HVM virtual machines and ultra-fast, high-density system containers (LXC / Docker) on the same cluster.
 - 🌐 **Public Hosting Website / Client Portal System**: Built-in modern public-facing hosting website (`apps/web`) ready to install on your root domain (e.g. `lunars.indevs.in`) with live cluster telemetry ping and deep-linked pricing plans linked directly to your Master Panel (`https://vps.lunars.indevs.in`).
 - 🎨 **8 Unique Visual Design Themes**: More than just colors — choose from 8 distinct layout styles and aesthetics (Cockpit Glass HUD, Minimalist Flat SaaS, Datacenter NOC Pro, Retro Synthwave, Terminal Matrix, Nordic Frost, OLED Pure Black, and Valkyrie Crimson).
@@ -112,10 +115,13 @@ VPS Panel features 8 distinctly different visual design themes and layout styles
 
 ---
 
-## 🚀 HVM (Hardware Virtual Machine) Features
+## 🚀 HVM (Hardware Virtual Machine), Windows & Custom ISO
 
 When creating a VPS instance in the panel, choose **Dedicated HVM (KVM / QEMU)**:
 
+- **🪟 Windows Server & Windows 11**: Dedicated virtual machines with SATA bus controllers and pre-configured VNC graphics. Open the Web VNC Console to complete installation and click **Send Ctrl+Alt+Del** to sign in.
+- **🖥️ Graphical Desktop Distros**: Pre-configured Ubuntu Desktop GUI and Debian Desktop GUI templates with XFCE desktop environment accessible directly inside the browser.
+- **💿 Custom ISO Boot**: Provide a direct HTTP/HTTPS URL to any bootable `.iso`. The agent attaches it as an IDE CD-ROM with `<boot dev='cdrom'/>` and `<boot dev='hd'/>` fallback.
 - **Isolated Kernel**: Unlike containers, HVM VMs boot their own independent Linux or Windows kernel.
 - **Full Docker & K8s Support**: Run nested Docker containers, Kubernetes, Podman, and LXC inside your VPS.
 - **WireGuard & OpenVPN**: Full `/dev/net/tun` network interface support without host permission barriers.
@@ -217,6 +223,7 @@ vps-panel install-web lunars.indevs.in https://vps.lunars.indevs.in
 | `443` | TCP | HTTPS Encrypted Web Traffic & WebSocket Console |
 | `4000` | TCP | Master Controller Internal API (Localhost / Reverse Proxy) |
 | `4001` | TCP | Worker Node Daemon (Telemetry & Remote Orchestration) |
+| `5900-5999` | TCP | Dedicated VNC Display Ports for Windows & GUI Guests |
 
 ---
 

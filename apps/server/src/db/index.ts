@@ -75,6 +75,8 @@ export function initDatabase() {
       version TEXT NOT NULL,
       image_ref TEXT NOT NULL,
       virt_type TEXT NOT NULL DEFAULT 'hvm',
+      os_type TEXT NOT NULL DEFAULT 'linux',
+      iso_url TEXT,
       min_ram_mb INTEGER NOT NULL DEFAULT 1024,
       min_disk_gb INTEGER NOT NULL DEFAULT 10,
       default_user TEXT NOT NULL DEFAULT 'root',
@@ -111,7 +113,11 @@ export function initDatabase() {
       user_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'creating',
       virt_type TEXT NOT NULL DEFAULT 'hvm',
+      os_type TEXT NOT NULL DEFAULT 'linux',
       os_image TEXT NOT NULL,
+      iso_url TEXT,
+      vnc_port INTEGER DEFAULT 5900,
+      vnc_password TEXT,
       cpu_cores INTEGER NOT NULL DEFAULT 1,
       ram_mb INTEGER NOT NULL DEFAULT 1024,
       disk_gb INTEGER NOT NULL DEFAULT 20,
@@ -165,6 +171,24 @@ export function initDatabase() {
     db.exec("ALTER TABLE vps_instances ADD COLUMN virt_type TEXT NOT NULL DEFAULT 'hvm';");
   } catch (e) {}
   try {
+    db.exec("ALTER TABLE vps_instances ADD COLUMN os_type TEXT NOT NULL DEFAULT 'linux';");
+  } catch (e) {}
+  try {
+    db.exec("ALTER TABLE vps_instances ADD COLUMN iso_url TEXT;");
+  } catch (e) {}
+  try {
+    db.exec("ALTER TABLE vps_instances ADD COLUMN vnc_port INTEGER DEFAULT 5900;");
+  } catch (e) {}
+  try {
+    db.exec("ALTER TABLE vps_instances ADD COLUMN vnc_password TEXT;");
+  } catch (e) {}
+  try {
     db.exec("ALTER TABLE os_templates ADD COLUMN virt_type TEXT NOT NULL DEFAULT 'hvm';");
+  } catch (e) {}
+  try {
+    db.exec("ALTER TABLE os_templates ADD COLUMN os_type TEXT NOT NULL DEFAULT 'linux';");
+  } catch (e) {}
+  try {
+    db.exec("ALTER TABLE os_templates ADD COLUMN iso_url TEXT;");
   } catch (e) {}
 }

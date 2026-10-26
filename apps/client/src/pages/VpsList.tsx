@@ -12,7 +12,9 @@ import {
   CheckCircle,
   AlertTriangle,
   RotateCw,
-  Key
+  Key,
+  Monitor,
+  Disc
 } from 'lucide-react';
 import { api } from '../api/client';
 import { VpsInstance } from '../types';
@@ -200,9 +202,24 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenC
 
                     {/* OS */}
                     <td className="py-4 px-4 text-xs text-slate-300">
-                      <span className="px-2 py-0.5 bg-slate-900 border border-slate-700/80 rounded-md font-mono text-[11px] text-slate-300">
-                        {vps.os_image}
-                      </span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="px-2 py-0.5 bg-slate-900 border border-slate-700/80 rounded-md font-mono text-[11px] text-slate-300">
+                          {vps.os_image}
+                        </span>
+                        {vps.os_type === 'windows' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-blue-400 font-medium">
+                            <Monitor className="w-3 h-3" /> Windows VNC :{vps.vnc_port || 5900}
+                          </span>
+                        ) : vps.os_type === 'gui_desktop' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-indigo-400 font-medium">
+                            <Monitor className="w-3 h-3" /> Desktop GUI :{vps.vnc_port || 5900}
+                          </span>
+                        ) : vps.os_type === 'custom_iso' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-medium">
+                            <Disc className="w-3 h-3" /> Boot ISO :{vps.vnc_port || 5900}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
 
                     {/* Actions */}
@@ -212,11 +229,19 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenC
                         {/* Terminal Console */}
                         <button
                           onClick={() => onOpenConsole(vps)}
-                          title="Open Interactive Web Console (xterm.js)"
-                          className="px-2.5 py-1.5 bg-slate-800 hover:bg-cyan-500/20 text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition"
+                          title={vps.os_type === 'windows' || vps.os_type === 'gui_desktop' || vps.os_type === 'custom_iso' ? "Open Web VNC Console" : "Open Interactive Web Console (xterm.js)"}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition ${
+                            vps.os_type === 'windows' || vps.os_type === 'gui_desktop' || vps.os_type === 'custom_iso'
+                              ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border-blue-500/40'
+                              : 'bg-slate-800 hover:bg-cyan-500/20 text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 border-slate-700'
+                          }`}
                         >
-                          <TermIcon className="w-3.5 h-3.5" />
-                          <span>Console</span>
+                          {vps.os_type === 'windows' || vps.os_type === 'gui_desktop' || vps.os_type === 'custom_iso' ? (
+                            <Monitor className="w-3.5 h-3.5 text-blue-400" />
+                          ) : (
+                            <TermIcon className="w-3.5 h-3.5" />
+                          )}
+                          <span>{vps.os_type === 'windows' || vps.os_type === 'gui_desktop' || vps.os_type === 'custom_iso' ? 'VNC Display' : 'Console'}</span>
                         </button>
 
                         {/* Power Control */}

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # ==============================================================================
 # VPS PANEL - Universal Control & Management Utility (CLI & Installer)
 # GitHub: https://github.com/prcgaming/vps-panel
@@ -713,10 +713,11 @@ install_panel() {
     if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
       export DEBIAN_FRONTEND=noninteractive
       apt-get update -y -q
-      apt-get install -y -q qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst cpu-checker 2>/dev/null || true
+      apt-get install -y -q qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst cpu-checker qemu-utils curl 2>/dev/null || true
     elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
-      yum install -y qemu-kvm libvirt libvirt-client virt-install bridge-utils 2>/dev/null || true
+      yum install -y qemu-kvm libvirt libvirt-client virt-install bridge-utils qemu-img curl 2>/dev/null || true
     fi
+    mkdir -p /opt/vps-panel/isos /opt/vps-panel/images /opt/vps-panel/vms 2>/dev/null || true
     if is_systemd; then
       systemctl enable libvirtd 2>/dev/null || true
       systemctl start libvirtd 2>/dev/null || true

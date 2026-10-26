@@ -10,6 +10,7 @@ export class KvmDriver implements BaseDriver {
   private hasQemu = false;
   private hasKvmDev = false;
   private vmsDir = '/opt/vps-panel/vms';
+  private isosDir = '/opt/vps-panel/isos';
   private processes = new Map<string, ChildProcess>();
 
   async init(): Promise<void> {
@@ -18,10 +19,17 @@ export class KvmDriver implements BaseDriver {
       if (!fs.existsSync(this.vmsDir)) {
         fs.mkdirSync(this.vmsDir, { recursive: true });
       }
+      if (!fs.existsSync(this.isosDir)) {
+        fs.mkdirSync(this.isosDir, { recursive: true });
+      }
     } catch {
       this.vmsDir = path.join(process.cwd(), '.vms');
+      this.isosDir = path.join(process.cwd(), '.isos');
       if (!fs.existsSync(this.vmsDir)) {
         fs.mkdirSync(this.vmsDir, { recursive: true });
+      }
+      if (!fs.existsSync(this.isosDir)) {
+        fs.mkdirSync(this.isosDir, { recursive: true });
       }
     }
 
@@ -99,6 +107,19 @@ export class KvmDriver implements BaseDriver {
     }
 
     // 2. Provision with Virsh / Libvirt if available
+    let isoPath = '';
+    const hasIso = Boolean(config.iso_url && config.iso_url.trim().length > 0);
+    if (hasIso) {
+      const isoName = `iso-${config.id}.iso`;
+      isoPath = path.join(this.isosDir, isoName);
+      try {
+        console.log(`[KvmDriver] Mounting custom boot ISO from ${config.iso_url}...`);
+        execSync(`curl -sSL -m 30 -o "${isoPath}" "${config.iso_url}"`, { stdio: 'ignore' });
+      } catch (err: any) {
+        console.warn(`[KvmDriver] Custom ISO initial download warning:`, err.message);
+      }
+    }
+
     if (this.hasVirsh) {
       try {
         const domainXml = `
@@ -108,7 +129,7 @@ export class KvmDriver implements BaseDriver {
   <vcpu placement='static'>${config.cpu_cores}</vcpu>
   <os>
     <type arch='x86_64' machine='pc'>hvm</type>
-    <boot dev='hd'/>
+    ${hasIso ? '<boot dev="cdrom"/><boot dev="hd"/>' : '<boot dev="hd"/>'}
   </os>
   <features>
     <acpi/>
@@ -119,8 +140,15 @@ export class KvmDriver implements BaseDriver {
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2'/>
       <source file='${diskPath}'/>
-      <target dev='vda' bus='virtio'/>
+      <target dev='vda' bus='${config.os_type === 'windows' ? 'sata' : 'virtio'}'/>
     </disk>
+    ${hasIso ? `
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='${isoPath}'/>
+      <target dev='hdb' bus='ide'/>
+      <readonly/>
+    </disk>` : ''}
     <interface type='network'>
       <source network='default'/>
       <model type='virtio'/>
@@ -131,7 +159,7 @@ export class KvmDriver implements BaseDriver {
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
-    <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>
+    <graphics type='vnc' port='${config.vnc_port || 5900}' autoport='yes' listen='0.0.0.0'/>
   </devices>
 </domain>`.trim();
 
@@ -152,7 +180,11 @@ export class KvmDriver implements BaseDriver {
       name: config.name,
       hostname: config.hostname,
       virt_type: 'hvm',
+      os_type: config.os_type || 'linux',
       os_image: config.os_image,
+      iso_url: config.iso_url || '',
+      vnc_port: config.vnc_port || 5900,
+      vnc_password: config.vnc_password || '',
       cpu_cores: config.cpu_cores,
       ram_mb: config.ram_mb,
       disk_gb: config.disk_gb,

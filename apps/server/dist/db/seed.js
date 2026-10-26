@@ -21,10 +21,11 @@ export function seedDatabase() {
     `).run('user-demo-client', 'user@vpspanel.local', userPass, 'user', 'Client User');
         console.log(`[Seed] Super Admin user created: ${adminEmail}`);
     }
-    // 2. Seed Standard OS Templates (HVM & Container base images)
+    // 2. Seed Standard OS Templates (HVM, Windows, Desktop GUI & Custom ISO)
     const templateCount = db.prepare('SELECT COUNT(*) as c FROM os_templates').get().c;
     if (templateCount === 0) {
         const templates = [
+            // Linux Server HVM
             {
                 id: 'tmpl-ubuntu-2404-hvm',
                 name: 'Ubuntu 24.04 LTS (HVM - Full KVM Virtualization)',
@@ -32,6 +33,8 @@ export function seedDatabase() {
                 version: '24.04',
                 image_ref: 'ubuntu:24.04',
                 virt_type: 'hvm',
+                os_type: 'linux',
+                iso_url: null,
                 min_ram_mb: 1024,
                 min_disk_gb: 15,
                 default_user: 'root',
@@ -44,6 +47,8 @@ export function seedDatabase() {
                 version: '12',
                 image_ref: 'debian:12',
                 virt_type: 'hvm',
+                os_type: 'linux',
+                iso_url: null,
                 min_ram_mb: 512,
                 min_disk_gb: 10,
                 default_user: 'root',
@@ -56,22 +61,12 @@ export function seedDatabase() {
                 version: '3.20',
                 image_ref: 'alpine:3.20',
                 virt_type: 'hvm',
+                os_type: 'linux',
+                iso_url: null,
                 min_ram_mb: 256,
                 min_disk_gb: 5,
                 default_user: 'root',
                 icon: 'alpine'
-            },
-            {
-                id: 'tmpl-windows-2022-hvm',
-                name: 'Windows Server 2022 (HVM - Dedicated KVM Virtual Machine)',
-                distro: 'Windows',
-                version: '2022',
-                image_ref: 'windows:2022-standard',
-                virt_type: 'hvm',
-                min_ram_mb: 4096,
-                min_disk_gb: 40,
-                default_user: 'Administrator',
-                icon: 'windows'
             },
             {
                 id: 'tmpl-arch-hvm',
@@ -80,11 +75,101 @@ export function seedDatabase() {
                 version: 'latest',
                 image_ref: 'archlinux:latest',
                 virt_type: 'hvm',
+                os_type: 'linux',
+                iso_url: null,
                 min_ram_mb: 1024,
                 min_disk_gb: 15,
                 default_user: 'root',
                 icon: 'arch'
             },
+            // Windows OS Virtual Machines
+            {
+                id: 'tmpl-win-2022',
+                name: 'Windows Server 2022 Datacenter (HVM + Web VNC)',
+                distro: 'Windows',
+                version: '2022',
+                image_ref: 'windows:2022-datacenter',
+                virt_type: 'hvm',
+                os_type: 'windows',
+                iso_url: null,
+                min_ram_mb: 4096,
+                min_disk_gb: 40,
+                default_user: 'Administrator',
+                icon: 'windows'
+            },
+            {
+                id: 'tmpl-win-2019',
+                name: 'Windows Server 2019 Standard (HVM + Web VNC)',
+                distro: 'Windows',
+                version: '2019',
+                image_ref: 'windows:2019-standard',
+                virt_type: 'hvm',
+                os_type: 'windows',
+                iso_url: null,
+                min_ram_mb: 4096,
+                min_disk_gb: 40,
+                default_user: 'Administrator',
+                icon: 'windows'
+            },
+            {
+                id: 'tmpl-win-11',
+                name: 'Windows 11 Pro Virtual Desktop (HVM + Web VNC)',
+                distro: 'Windows',
+                version: '11',
+                image_ref: 'windows:11-pro',
+                virt_type: 'hvm',
+                os_type: 'windows',
+                iso_url: null,
+                min_ram_mb: 4096,
+                min_disk_gb: 50,
+                default_user: 'Administrator',
+                icon: 'windows'
+            },
+            // Graphical Desktop Interface Linux
+            {
+                id: 'tmpl-ubuntu-desktop',
+                name: 'Ubuntu 24.04 Desktop GUI (XFCE + Web VNC Interface)',
+                distro: 'Ubuntu Desktop',
+                version: '24.04-gui',
+                image_ref: 'ubuntu-desktop:24.04',
+                virt_type: 'hvm',
+                os_type: 'gui_desktop',
+                iso_url: null,
+                min_ram_mb: 2048,
+                min_disk_gb: 25,
+                default_user: 'desktop',
+                icon: 'monitor'
+            },
+            {
+                id: 'tmpl-debian-desktop',
+                name: 'Debian 12 Desktop GUI (XFCE + Web VNC Interface)',
+                distro: 'Debian Desktop',
+                version: '12-gui',
+                image_ref: 'debian-desktop:12',
+                virt_type: 'hvm',
+                os_type: 'gui_desktop',
+                iso_url: null,
+                min_ram_mb: 2048,
+                min_disk_gb: 20,
+                default_user: 'desktop',
+                icon: 'monitor'
+            },
+            // Custom ISO Installation Mode
+            {
+                id: 'tmpl-custom-iso',
+                name: 'Custom ISO Boot (Mount & Install Your Own OS via VNC)',
+                distro: 'Custom ISO',
+                version: 'custom',
+                image_ref: 'custom-iso:boot',
+                virt_type: 'hvm',
+                os_type: 'custom_iso',
+                iso_url: '',
+                min_ram_mb: 1024,
+                min_disk_gb: 20,
+                default_user: 'root',
+                icon: 'disc'
+            },
+            // Containers
             {
                 id: 'tmpl-ubuntu-2404-container',
                 name: 'Ubuntu 24.04 (LXC / System Container)',
@@ -92,6 +177,8 @@ export function seedDatabase() {
                 version: '24.04',
                 image_ref: 'ubuntu:24.04',
                 virt_type: 'container',
+                os_type: 'linux',
+                iso_url: null,
                 min_ram_mb: 512,
                 min_disk_gb: 10,
                 default_user: 'root',
@@ -104,6 +191,8 @@ export function seedDatabase() {
                 version: '3.20',
                 image_ref: 'alpine:3.20',
                 virt_type: 'container',
+                os_type: 'linux',
+                iso_url: null,
                 min_ram_mb: 256,
                 min_disk_gb: 5,
                 default_user: 'root',
@@ -111,17 +200,20 @@ export function seedDatabase() {
             }
         ];
         const insertTemplate = db.prepare(`
-      INSERT INTO os_templates (id, name, distro, version, image_ref, virt_type, min_ram_mb, min_disk_gb, default_user, icon)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO os_templates (id, name, distro, version, image_ref, virt_type, os_type, iso_url, min_ram_mb, min_disk_gb, default_user, icon)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
         for (const t of templates) {
-            insertTemplate.run(t.id, t.name, t.distro, t.version, t.image_ref, t.virt_type, t.min_ram_mb, t.min_disk_gb, t.default_user, t.icon);
+            insertTemplate.run(t.id, t.name, t.distro, t.version, t.image_ref, t.virt_type, t.os_type, t.iso_url, t.min_ram_mb, t.min_disk_gb, t.default_user, t.icon);
         }
-        console.log('[Seed] HVM & Container OS Templates seeded successfully');
+        console.log('[Seed] HVM, Windows, Desktop GUI & Custom ISO Templates seeded successfully');
     }
     else {
         try {
             db.exec("UPDATE os_templates SET virt_type = 'hvm' WHERE virt_type IS NULL OR virt_type = '';");
+            db.exec("UPDATE os_templates SET os_type = 'windows' WHERE image_ref LIKE '%windows%' OR name LIKE '%Windows%';");
+            db.exec("UPDATE os_templates SET os_type = 'custom_iso' WHERE id = 'tmpl-custom-iso' OR image_ref LIKE '%custom-iso%';");
+            db.exec("UPDATE os_templates SET os_type = 'linux' WHERE os_type IS NULL OR os_type = '';");
         }
         catch (e) { }
     }

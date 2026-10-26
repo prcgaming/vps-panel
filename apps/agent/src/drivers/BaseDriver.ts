@@ -3,7 +3,11 @@ export interface VpsConfig {
   name: string;
   hostname: string;
   virt_type?: 'hvm' | 'container';
+  os_type?: 'linux' | 'windows' | 'gui_desktop' | 'custom_iso';
   os_image: string;
+  iso_url?: string;
+  vnc_port?: number;
+  vnc_password?: string;
   cpu_cores: number;
   ram_mb: number;
   disk_gb: number;

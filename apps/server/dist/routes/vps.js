@@ -27,8 +27,21 @@ router.get('/', authenticate, (req, res) => {
 // POST /api/vps - Create new VPS instance
 router.post('/', authenticate, async (req, res) => {
     const user = req.user;
-    const { name, hostname, virt_type = 'hvm', os_image = 'ubuntu:24.04', cpu_cores = 1, ram_mb = 1024, disk_gb = 20, node_id, // optional: if not supplied, auto-scheduler chooses least loaded node
+    const { name, hostname, virt_type = 'hvm', os_type: rawOsType, os_image = 'ubuntu:24.04', iso_url, cpu_cores = 1, ram_mb = 1024, disk_gb = 20, node_id, // optional: if not supplied, auto-scheduler chooses least loaded node
     root_password, ssh_key } = req.body;
+    // Auto-detect OS Type (Windows, Desktop GUI, Custom ISO, or Linux)
+    let os_type = rawOsType || 'linux';
+    if (!rawOsType) {
+        if (os_image.toLowerCase().includes('windows') || name.toLowerCase().includes('windows')) {
+            os_type = 'windows';
+        }
+        else if (os_image.toLowerCase().includes('desktop') || os_image.toLowerCase().includes('gui')) {
+            os_type = 'gui_desktop';
+        }
+        else if (iso_url || os_image.toLowerCase().includes('custom-iso')) {
+            os_type = 'custom_iso';
+        }
+    }
     if (!name || !hostname) {
         res.status(400).json({ error: 'Name and hostname are required' });
         return;
@@ -93,13 +106,15 @@ router.post('/', authenticate, async (req, res) => {
     }
     const vpsId = `vps-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
     const password = root_password || `Pass_${Math.random().toString(36).substring(2, 10)}!`;
+    const vncPort = 5900 + Math.floor(Math.random() * 2000);
+    const vncPassword = Math.random().toString(36).substring(2, 10);
     // Insert into DB as creating
     db.prepare(`
     INSERT INTO vps_instances (
-      id, name, hostname, node_id, user_id, status, virt_type, os_image, 
-      cpu_cores, ram_mb, disk_gb, ip_address, gateway, netmask, root_password, ssh_key
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(vpsId, name, hostname, targetNodeId, user.id, 'creating', virt_type, os_image, cpu_cores, ram_mb, disk_gb, assignedIp, assignedGateway, assignedNetmask, password, ssh_key || '');
+      id, name, hostname, node_id, user_id, status, virt_type, os_type, os_image, 
+      iso_url, vnc_port, vnc_password, cpu_cores, ram_mb, disk_gb, ip_address, gateway, netmask, root_password, ssh_key
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(vpsId, name, hostname, targetNodeId, user.id, 'creating', virt_type, os_type, os_image, iso_url || '', vncPort, vncPassword, cpu_cores, ram_mb, disk_gb, assignedIp, assignedGateway, assignedNetmask, password, ssh_key || '');
     // Mark IP as used
     if (freeIp) {
         db.prepare('UPDATE ip_allocations SET vps_id = ? WHERE id = ?').run(vpsId, freeIp.id);
@@ -108,7 +123,7 @@ router.post('/', authenticate, async (req, res) => {
     db.prepare(`
     INSERT INTO activity_logs (id, user_id, action, target_type, target_id, details, ip_address)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created ${virt_type.toUpperCase()} VPS ${name} (${assignedIp}) on node ${targetNodeId}`, req.ip || '127.0.0.1');
+  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created ${virt_type.toUpperCase()} (${os_type}) VPS ${name} (${assignedIp}) on node ${targetNodeId}`, req.ip || '127.0.0.1');
     // 3. Dispatch creation to node agent if connected
     try {
         if (wsHub.isNodeOnline(targetNodeId)) {
@@ -117,7 +132,11 @@ router.post('/', authenticate, async (req, res) => {
                 name,
                 hostname,
                 virt_type,
+                os_type,
                 os_image,
+                iso_url: iso_url || '',
+                vnc_port: vncPort,
+                vnc_password: vncPassword,
                 cpu_cores,
                 ram_mb,
                 disk_gb,
