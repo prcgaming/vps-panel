@@ -2,6 +2,7 @@ export interface VpsConfig {
   id: string;
   name: string;
   hostname: string;
+  virt_type?: 'hvm' | 'container';
   os_image: string;
   cpu_cores: number;
   ram_mb: number;

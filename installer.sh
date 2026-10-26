@@ -342,6 +342,160 @@ VHOSTEOF
 }
 
 # ------------------------------------------------------------------------------
+# Configure Nginx for Public Hosting Website / Client Portal (Root Domain)
+# ------------------------------------------------------------------------------
+setup_nginx_web_portal() {
+  local WEB_DOMAIN="$1"
+  local LINKED_PANEL_URL="$2"
+  local BRAND_NAME="${3:-Lunar Cloud HVM}"
+
+  echo -e "\n${YELLOW}[*] Configuring Nginx for Public Hosting Website on ${BOLD}${WEB_DOMAIN}${NC}..."
+  if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y -q
+    apt-get install -y -q nginx certbot python3-certbot-nginx
+  elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
+    yum install -y nginx certbot python3-certbot-nginx
+  fi
+
+  mkdir -p /var/www/vps-panel-web
+
+  # Copy web portal files to /var/www/vps-panel-web
+  if [ -d "$INSTALL_DIR/apps/web" ]; then
+    cp -r "$INSTALL_DIR/apps/web/"* /var/www/vps-panel-web/ 2>/dev/null || true
+  fi
+
+  # Update config.json with linked panel URL and brand
+  cat > /var/www/vps-panel-web/config.json << WEBCONFIGEOF
+{
+  "panelUrl": "${LINKED_PANEL_URL}",
+  "brandName": "${BRAND_NAME}",
+  "companyName": "${BRAND_NAME}",
+  "supportUrl": "${LINKED_PANEL_URL}"
+}
+WEBCONFIGEOF
+
+  mkdir -p /etc/nginx/conf.d
+  if [ ! -f /etc/nginx/conf.d/cloudflare_real_ip.conf ]; then
+    cat > /etc/nginx/conf.d/cloudflare_real_ip.conf << 'CFIP'
+set_real_ip_from 173.245.48.0/20;
+set_real_ip_from 103.21.244.0/22;
+set_real_ip_from 103.22.200.0/22;
+set_real_ip_from 103.31.4.0/22;
+set_real_ip_from 141.101.64.0/18;
+set_real_ip_from 108.162.192.0/18;
+set_real_ip_from 190.93.240.0/20;
+set_real_ip_from 188.114.96.0/20;
+set_real_ip_from 197.234.240.0/22;
+set_real_ip_from 198.41.128.0/17;
+set_real_ip_from 162.158.0.0/15;
+set_real_ip_from 104.16.0.0/13;
+set_real_ip_from 104.24.0.0/14;
+set_real_ip_from 172.64.0.0/13;
+set_real_ip_from 131.0.72.0/22;
+set_real_ip_from 2400:cb00::/32;
+set_real_ip_from 2606:4700::/32;
+set_real_ip_from 2803:f800::/32;
+set_real_ip_from 2405:b500::/32;
+set_real_ip_from 2405:8100::/32;
+set_real_ip_from 2a06:98c0::/29;
+set_real_ip_from 2c0f:f248::/32;
+real_ip_header CF-Connecting-IP;
+CFIP
+  fi
+
+  mkdir -p /etc/ssl/vps-panel
+  if [ ! -f /etc/ssl/vps-panel/cert.pem ] || [ ! -f /etc/ssl/vps-panel/key.pem ]; then
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+      -keyout /etc/ssl/vps-panel/key.pem \
+      -out /etc/ssl/vps-panel/cert.pem \
+      -subj "/CN=${WEB_DOMAIN}" >/dev/null 2>&1
+  fi
+
+  local VHOST="/etc/nginx/conf.d/${WEB_DOMAIN}.conf"
+  if [ -d "/etc/nginx/sites-available" ]; then
+    VHOST="/etc/nginx/sites-available/${WEB_DOMAIN}.conf"
+  fi
+
+  cat > "$VHOST" << VHOSTEOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $WEB_DOMAIN;
+
+    root /var/www/vps-panel-web;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name $WEB_DOMAIN;
+
+    root /var/www/vps-panel-web;
+    index index.html;
+
+    ssl_certificate /etc/ssl/vps-panel/cert.pem;
+    ssl_certificate_key /etc/ssl/vps-panel/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+VHOSTEOF
+
+  if [ -d "/etc/nginx/sites-enabled" ]; then
+    ln -sf "$VHOST" "/etc/nginx/sites-enabled/${WEB_DOMAIN}.conf"
+  fi
+
+  start_or_reload_nginx
+
+  certbot --nginx -d "$WEB_DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect 2>/dev/null || {
+    echo -e "${YELLOW}[NOTE] Cloudflare Proxy is active. Origin TLS certificate is active on port 443.${NC}"
+  }
+
+  start_or_reload_nginx
+  echo -e "\n${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}"
+  echo -e "${GREEN}${BOLD}*  PUBLIC HOSTING WEBSITE LIVE AT: https://${WEB_DOMAIN}${NC}"
+  echo -e "${GREEN}${BOLD}*  LINKED MASTER CONTROL PANEL:    ${LINKED_PANEL_URL}${NC}"
+  echo -e "${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}\n"
+}
+
+install_web_portal() {
+  print_banner
+  check_root
+  detect_system
+
+  echo -e "${CYAN}${BOLD}[+] Public Hosting Website & Client Portal Installer:${NC}\n"
+
+  if [ -z "$WEB_DOMAIN" ]; then
+    read -r -p "Enter Domain for Website (e.g. lunars.indevs.in): " WEB_DOMAIN_INPUT
+    WEB_DOMAIN="${WEB_DOMAIN_INPUT:-lunars.indevs.in}"
+  fi
+
+  if [ -z "$LINKED_PANEL_URL" ]; then
+    local default_panel_url="https://vps.${WEB_DOMAIN}"
+    read -r -p "Enter Linked Master Panel URL [$default_panel_url]: " PANEL_URL_INPUT
+    LINKED_PANEL_URL="${PANEL_URL_INPUT:-$default_panel_url}"
+  fi
+
+  read -r -p "Enter Hosting Brand Name [Lunar Cloud HVM]: " BRAND_INPUT
+  local BRAND_NAME="${BRAND_INPUT:-Lunar Cloud HVM}"
+
+  if [ ! -d "$INSTALL_DIR/apps/web" ]; then
+    download_panel_files
+  fi
+
+  setup_nginx_web_portal "$WEB_DOMAIN" "$LINKED_PANEL_URL" "$BRAND_NAME"
+}
+
+# ------------------------------------------------------------------------------
 # Start VPS Panel Master Service (Systemd or PM2/SysV init)
 # ------------------------------------------------------------------------------
 start_vps_panel_service() {
@@ -513,28 +667,42 @@ install_panel() {
 
   # 5. Hypervisor Driver Selection
   echo -e "\n${BOLD}Select Virtualization Hypervisor:${NC}"
-  echo -e "  ${CYAN}[1] Docker Containers${NC} (Recommended - high performance & instant provisioning)"
-  echo -e "  ${CYAN}[2] KVM / QEMU${NC} (Full hardware virtualization on bare metal)"
+  echo -e "  ${CYAN}[1] Dedicated HVM (KVM / QEMU)${NC} (Recommended - Full Hardware Virtualization, Windows/Linux/ISOs)"
+  echo -e "  ${CYAN}[2] High-Density Containers (Docker / LXC)${NC} (Lightweight system containers)"
   read -r -p "Select Driver [1-2, default: 1]: " DRIVER_INPUT
   DRIVER_INPUT=${DRIVER_INPUT:-1}
   if [ "$DRIVER_INPUT" = "2" ]; then
-    DRIVER="kvm"
-  else
     DRIVER="docker"
+  else
+    DRIVER="kvm"
   fi
 
-  # 6. License Key
-  read -r -p "Enter License Key [Press Enter for 30-Day Pro Unlimited or enter Lifetime key]: " KEY_INPUT
-  LICENSE_KEY=${KEY_INPUT:-"LUNAR-30DAY-PRO-UNLIMITED"}
+  # Panel License is 100% Free & Unlimited
+  LICENSE_KEY="OPEN-COMMUNITY-UNLIMITED"
 
-  # 7. Internal Port
+  # 6. Internal Port
   read -r -p "Enter Panel Internal Port [4000]: " PORT_INPUT
   PANEL_PORT=${PORT_INPUT:-4000}
 
   install_dependencies
 
-  # If Docker is chosen, install and prepare real Docker engine
-  if [ "$DRIVER" = "docker" ]; then
+  # If KVM is chosen, install and prepare KVM & Libvirt packages
+  if [ "$DRIVER" = "kvm" ]; then
+    echo -e "\n${YELLOW}[*] Installing KVM / QEMU virtualization packages & libvirt daemon...${NC}"
+    if [[ "$OS" =~ ^(ubuntu|debian)$ ]]; then
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update -y -q
+      apt-get install -y -q qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst cpu-checker 2>/dev/null || true
+    elif [[ "$OS" =~ ^(centos|rhel|rocky|almalinux|fedora)$ ]]; then
+      yum install -y qemu-kvm libvirt libvirt-client virt-install bridge-utils 2>/dev/null || true
+    fi
+    if is_systemd; then
+      systemctl enable libvirtd 2>/dev/null || true
+      systemctl start libvirtd 2>/dev/null || true
+    else
+      service libvirtd start 2>/dev/null || true
+    fi
+  elif [ "$DRIVER" = "docker" ]; then
     if ! command -v docker >/dev/null 2>&1; then
       echo -e "\n${YELLOW}[*] Installing official Docker Engine for container virtualization...${NC}"
       curl -fsSL https://get.docker.com | sh 2>/dev/null || true
@@ -1082,17 +1250,18 @@ show_help() {
   print_banner
   echo -e "${BOLD}Usage:${NC} vps-panel <command> [arguments]\n"
   echo -e "Available Commands:"
-  echo -e "  ${CYAN}install [domain]${NC}     Run the 1-click panel installation & SSL setup"
-  echo -e "  ${CYAN}update${NC}               Update panel to the newest release from GitHub"
-  echo -e "  ${CYAN}start${NC}                Start Master Panel and Nginx web server"
-  echo -e "  ${CYAN}stop${NC}                 Stop Master Panel backend service"
-  echo -e "  ${CYAN}restart${NC}              Restart Master Panel and Nginx"
-  echo -e "  ${CYAN}status${NC}               Display live service status & health check"
-  echo -e "  ${CYAN}logs${NC}                 Stream live real-time backend logs"
-  echo -e "  ${CYAN}uninstall${NC}            Cleanly remove panel with automated DB backup"
-  echo -e "  ${CYAN}--node${NC}               Install Worker Node Hypervisor Agent on this VPS"
-  echo -e "  ${CYAN}--standalone${NC}         Install both Master Panel and Local Node"
-  echo -e "  ${CYAN}-h, --help${NC}           Show this help message\n"
+  echo -e "  ${CYAN}install [domain]${NC}               Run the 1-click panel installation & SSL setup"
+  echo -e "  ${CYAN}install-web [domain] [url]${NC}     Install Public Hosting Website & link to panel"
+  echo -e "  ${CYAN}update${NC}                         Update panel to the newest release from GitHub"
+  echo -e "  ${CYAN}start${NC}                          Start Master Panel and Nginx web server"
+  echo -e "  ${CYAN}stop${NC}                           Stop Master Panel backend service"
+  echo -e "  ${CYAN}restart${NC}                        Restart Master Panel and Nginx"
+  echo -e "  ${CYAN}status${NC}                         Display live service status & health check"
+  echo -e "  ${CYAN}logs${NC}                           Stream live real-time backend logs"
+  echo -e "  ${CYAN}uninstall${NC}                      Cleanly remove panel with automated DB backup"
+  echo -e "  ${CYAN}--node${NC}                         Install Worker Node Hypervisor Agent on this VPS"
+  echo -e "  ${CYAN}--standalone${NC}                   Install both Master Panel and Local Node"
+  echo -e "  ${CYAN}-h, --help${NC}                     Show this help message\n"
 }
 
 # ------------------------------------------------------------------------------
@@ -1109,6 +1278,19 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
       install_panel
+      exit 0
+      ;;
+    install-web|--web|website)
+      shift
+      if [ -n "$1" ] && [[ ! "$1" =~ ^-- ]]; then
+        WEB_DOMAIN="$1"
+        shift
+      fi
+      if [ -n "$1" ] && [[ ! "$1" =~ ^-- ]]; then
+        LINKED_PANEL_URL="$1"
+        shift
+      fi
+      install_web_portal
       exit 0
       ;;
     update|upgrade)
@@ -1197,22 +1379,24 @@ print_banner
 check_root
 
 echo -e "${BOLD}Select what you would like to do:${NC}\n"
-echo -e "  ${CYAN}[0]${NC} ${BOLD}Install Complete VPS Panel${NC} (Panel + Local Hypervisor Node - Ready to create VPS!)"
+echo -e "  ${CYAN}[0]${NC} ${BOLD}Install Complete VPS Panel${NC} (Panel + Local HVM Node - Ready to create VPS!)"
 echo -e "  ${CYAN}[1]${NC} ${BOLD}Install Worker Node Daemon Only${NC} (Connect an external server as a worker node)"
-echo -e "  ${CYAN}[2]${NC} ${BOLD}Configure Cloudflare Domain & Nginx SSL${NC}"
-echo -e "  ${CYAN}[3]${NC} ${BOLD}Check Status & Health${NC}"
-echo -e "  ${CYAN}[4]${NC} ${BOLD}Update VPS Panel to Latest GitHub Release${NC}"
-echo -e "  ${CYAN}[5]${NC} ${BOLD}Restart Services${NC}"
-echo -e "  ${CYAN}[6]${NC} ${BOLD}View Realtime Logs${NC}"
-echo -e "  ${CYAN}[7]${NC} ${BOLD}Uninstall Panel${NC}"
-echo -e "  ${CYAN}[8]${NC} Exit\n"
-read -r -p "Input 0-8 [default: 0]: " ACTION
+echo -e "  ${CYAN}[2]${NC} ${BOLD}Install Public Hosting Website / Client Portal${NC} (Root domain e.g. lunars.indevs.in)"
+echo -e "  ${CYAN}[3]${NC} ${BOLD}Configure Cloudflare Domain & Nginx SSL for Panel${NC}"
+echo -e "  ${CYAN}[4]${NC} ${BOLD}Check Status & Health${NC}"
+echo -e "  ${CYAN}[5]${NC} ${BOLD}Update VPS Panel to Latest GitHub Release${NC}"
+echo -e "  ${CYAN}[6]${NC} ${BOLD}Restart Services${NC}"
+echo -e "  ${CYAN}[7]${NC} ${BOLD}View Realtime Logs${NC}"
+echo -e "  ${CYAN}[8]${NC} ${BOLD}Uninstall Panel${NC}"
+echo -e "  ${CYAN}[9]${NC} Exit\n"
+read -r -p "Input 0-9 [default: 0]: " ACTION
 ACTION_CHOICE=${ACTION:-0}
 
 case "$ACTION_CHOICE" in
   0) install_panel ;;
   1) install_node_daemon ;;
-  2)
+  2) install_web_portal ;;
+  3)
     read -r -p "Enter Domain (e.g. vps.lunars.indevs.in): " DOMAIN_NAME
     if [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
       PANEL_DOMAIN="$DOMAIN_NAME"
@@ -1221,11 +1405,11 @@ case "$ACTION_CHOICE" in
       setup_nginx_domain "$DOMAIN_NAME"
     fi
     ;;
-  3) cmd_status ;;
-  4) cmd_update ;;
-  5) cmd_restart ;;
-  6) cmd_logs ;;
-  7) cmd_uninstall ;;
-  8) echo "Exiting."; exit 0 ;;
+  4) cmd_status ;;
+  5) cmd_update ;;
+  6) cmd_restart ;;
+  7) cmd_logs ;;
+  8) cmd_uninstall ;;
+  9) echo "Exiting."; exit 0 ;;
   *) echo -e "${RED}Invalid selection!${NC}"; exit 1 ;;
 esac

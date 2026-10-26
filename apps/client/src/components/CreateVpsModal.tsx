@@ -19,6 +19,7 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
   // Form state
   const [name, setName] = useState('');
   const [hostname, setHostname] = useState('');
+  const [virtType, setVirtType] = useState<'hvm' | 'container'>('hvm');
   const [nodeId, setNodeId] = useState(''); // empty = auto-schedule
   const [osImage, setOsImage] = useState('ubuntu:24.04');
   const [selectedPlan, setSelectedPlan] = useState('starter');
@@ -63,6 +64,7 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
       await api.createVps({
         name,
         hostname: hostname || `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.local`,
+        virt_type: virtType,
         node_id: nodeId || undefined,
         os_image: osImage,
         cpu_cores: cpuCores,
@@ -104,10 +106,59 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
           
-          {/* Step 1: Identification */}
+          {/* Step 1: Virtualization Engine */}
           <div>
             <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 inline-flex items-center justify-center text-xs">1</span>
+              Virtualization Hypervisor Engine
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div
+                onClick={() => setVirtType('hvm')}
+                className={`p-3.5 rounded-xl border cursor-pointer transition ${
+                  virtType === 'hvm'
+                    ? 'bg-cyan-500/10 border-cyan-500 text-cyan-200 shadow-md ring-1 ring-cyan-500/50'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-sm flex items-center gap-2 text-slate-100">
+                    <Layers className="w-4 h-4 text-cyan-400" />
+                    🚀 Dedicated HVM (KVM / QEMU)
+                  </span>
+                  {virtType === 'hvm' && <Check className="w-4 h-4 text-cyan-400" />}
+                </div>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Hardware Virtual Machine. Full dedicated OS kernel, Docker inside VPS, WireGuard, Windows Server, Custom ISO.
+                </p>
+              </div>
+
+              <div
+                onClick={() => setVirtType('container')}
+                className={`p-3.5 rounded-xl border cursor-pointer transition ${
+                  virtType === 'container'
+                    ? 'bg-purple-500/10 border-purple-500 text-purple-200 shadow-md ring-1 ring-purple-500/50'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-sm flex items-center gap-2 text-slate-100">
+                    <Server className="w-4 h-4 text-purple-400" />
+                    ⚡ System Container (LXC / Docker)
+                  </span>
+                  {virtType === 'container' && <Check className="w-4 h-4 text-purple-400" />}
+                </div>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Ultra lightweight container. Instant 1s boot, shared kernel, high density memory for bots and fast web services.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2: Identification */}
+          <div>
+            <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 inline-flex items-center justify-center text-xs">2</span>
               Instance Identification
             </h4>
             <div className="grid grid-cols-2 gap-4">

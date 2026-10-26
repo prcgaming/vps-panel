@@ -10,7 +10,7 @@ import {
   LogOut,
   ExternalLink,
   ChevronRight,
-  Key,
+  Palette,
   Orbit
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -48,11 +48,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
 
   if (user?.role === 'admin') {
     navItems.push({ id: 'users', label: 'Users & Roles', icon: Users });
-    navItems.push({ id: 'settings', label: 'Settings & License', icon: Key, badge: 'License' });
+    navItems.push({ id: 'settings', label: 'Settings & Themes', icon: Palette, badge: 'Themes' });
   }
 
   return (
-    <aside className="w-64 bg-[#0a0e1a] border-r border-slate-800/80 flex flex-col justify-between flex-shrink-0 select-none">
+    <aside className={`w-64 border-r flex flex-col justify-between flex-shrink-0 select-none transition-colors duration-200 ${currentTheme.sidebarStyle}`}>
       <div>
         {/* Brand Header */}
         <div className="h-16 flex items-center px-6 border-b border-slate-800/80 gap-3">

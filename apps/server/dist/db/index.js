@@ -70,6 +70,7 @@ export function initDatabase() {
       distro TEXT NOT NULL,
       version TEXT NOT NULL,
       image_ref TEXT NOT NULL,
+      virt_type TEXT NOT NULL DEFAULT 'hvm',
       min_ram_mb INTEGER NOT NULL DEFAULT 1024,
       min_disk_gb INTEGER NOT NULL DEFAULT 10,
       default_user TEXT NOT NULL DEFAULT 'root',
@@ -105,6 +106,7 @@ export function initDatabase() {
       node_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'creating',
+      virt_type TEXT NOT NULL DEFAULT 'hvm',
       os_image TEXT NOT NULL,
       cpu_cores INTEGER NOT NULL DEFAULT 1,
       ram_mb INTEGER NOT NULL DEFAULT 1024,
@@ -153,4 +155,13 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_vps_user ON vps_instances(user_id);
     CREATE INDEX IF NOT EXISTS idx_nodes_status ON nodes(status);
   `);
+    // Non-destructive migrations for existing databases
+    try {
+        db.exec("ALTER TABLE vps_instances ADD COLUMN virt_type TEXT NOT NULL DEFAULT 'hvm';");
+    }
+    catch (e) { }
+    try {
+        db.exec("ALTER TABLE os_templates ADD COLUMN virt_type TEXT NOT NULL DEFAULT 'hvm';");
+    }
+    catch (e) { }
 }

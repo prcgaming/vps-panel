@@ -157,8 +157,19 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenC
                     
                     {/* Name */}
                     <td className="py-4 px-6">
-                      <div className="font-semibold text-slate-100">{vps.name}</div>
-                      <div className="text-xs font-mono text-slate-400">{vps.hostname}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-100">{vps.name}</span>
+                        {vps.virt_type === 'container' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            Container
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            HVM | KVM
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-mono text-slate-400 mt-0.5">{vps.hostname}</div>
                     </td>
 
                     {/* Status */}

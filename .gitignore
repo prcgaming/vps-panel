@@ -12,6 +12,8 @@ build/
 !apps/client/dist/**
 !apps/server/dist/
 !apps/server/dist/**
+!apps/agent/dist/
+!apps/agent/dist/**
 
 # Environment files
 .env

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lunar Cloud HVM - Next-Gen Hardware Virtual Machines</title>
+  <meta name="description" content="Deploy high-performance dedicated KVM Hardware Virtual Machines (HVM) with Gen4 NVMe storage, anti-DDoS protection, and instant provisioning.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <div class="container nav-wrap">
+      <a href="#" class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <span class="brand-name">Lunar Cloud HVM</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features">HVM Virtualization</a></li>
+        <li><a href="#plans">Compute Plans</a></li>
+        <li><a href="#monitor">Cluster Health</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          <span id="cluster-status-text">Cluster Operational</span>
+        </div>
+        <a href="https://vps.lunars.indevs.in" class="btn-primary link-panel">
+          <span>Client Portal</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-pill">
+        <span>🚀 Hardware Virtual Machine (HVM) Architecture</span>
+      </div>
+
+      <h1>
+        Next-Gen Dedicated <br>
+        <span class="gradient-text">HVM Cloud Virtual Machines</span>
+      </h1>
+
+      <p class="hero-desc">
+        Experience true hardware virtualization powered by KVM & QEMU. Get dedicated CPU cores, lightning-fast NVMe storage, out-of-band serial consoles, and 10Gbps DDoS protection.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#plans" class="btn-primary">
+          <span>Deploy HVM Instance</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="https://vps.lunars.indevs.in" class="btn-secondary link-panel">
+          <span>Sign In to Panel</span>
+        </a>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div class="stats-strip">
+        <div class="stat-box glass">
+          <div class="stat-value" id="stat-nodes-val">Multi-Node</div>
+          <div class="stat-label">Clustered Hypervisors</div>
+        </div>
+        <div class="stat-box glass">
+          <div class="stat-value" id="stat-vcpu-val">Dedicated KVM</div>
+          <div class="stat-label">Virtualization Kernel</div>
+        </div>
+        <div class="stat-box glass">
+          <div class="stat-value" id="stat-latency-val">&lt; 15ms</div>
+          <div class="stat-label">Ultra-Low Latency</div>
+        </div>
+        <div class="stat-box glass">
+          <div class="stat-value">99.99%</div>
+          <div class="stat-label">Guaranteed SLA Uptime</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Plans Section -->
+  <section class="section" id="plans">
+    <div class="container">
+      <div class="section-head">
+        <h2>High-Performance HVM VPS Plans</h2>
+        <p>Instant provisioning with automated IP allocation, customizable OS templates, and full root access.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Plan 1 -->
+        <div class="price-card glass">
+          <div class="plan-title">HVM Starter Micro</div>
+          <div class="plan-desc">Perfect for lightweight background workers, Telegram/Discord bots, and personal test apps.</div>
+          <div class="plan-price">
+            <span class="amount">$3.50</span>
+            <span class="term">/ month</span>
+          </div>
+          <ul class="specs-list">
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 1 Dedicated vCPU Core</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 1,024 MB RAM</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 20 GB NVMe Gen4 Storage</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 1 Dedicated Public IPv4</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Full KVM / QEMU Virtualization</li>
+          </ul>
+          <a href="https://vps.lunars.indevs.in" class="btn-secondary link-panel-deploy">Deploy Micro</a>
+        </div>
+
+        <!-- Plan 2 (Popular) -->
+        <div class="price-card glass popular">
+          <div class="popular-badge">Most Popular</div>
+          <div class="plan-title">HVM Standard Cloud</div>
+          <div class="plan-desc">Ideal for production web applications, Node/Python APIs, and growing databases.</div>
+          <div class="plan-price">
+            <span class="amount">$7.00</span>
+            <span class="term">/ month</span>
+          </div>
+          <ul class="specs-list">
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 2 Dedicated vCPU Cores</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 4,096 MB RAM</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 60 GB NVMe Gen4 Storage</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 1 Dedicated Public IPv4</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Docker / WireGuard Support</li>
+          </ul>
+          <a href="https://vps.lunars.indevs.in" class="btn-primary link-panel-deploy">Deploy Standard</a>
+        </div>
+
+        <!-- Plan 3 -->
+        <div class="price-card glass">
+          <div class="plan-title">HVM Power Pro</div>
+          <div class="plan-desc">Engineered for heavy continuous workloads, gaming servers, and high-traffic portals.</div>
+          <div class="plan-price">
+            <span class="amount">$14.00</span>
+            <span class="term">/ month</span>
+          </div>
+          <ul class="specs-list">
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 4 High-Clock vCPU Cores</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 8,192 MB RAM</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 120 GB NVMe Gen4 Storage</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 1 Dedicated Public IPv4</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Windows Server & Linux ISOs</li>
+          </ul>
+          <a href="https://vps.lunars.indevs.in" class="btn-secondary link-panel-deploy">Deploy Power Pro</a>
+        </div>
+
+        <!-- Plan 4 -->
+        <div class="price-card glass">
+          <div class="plan-title">HVM Ultra Enterprise</div>
+          <div class="plan-desc">Maximum compute throughput for enterprise clusters, Kubernetes nodes, and machine learning.</div>
+          <div class="plan-price">
+            <span class="amount">$28.00</span>
+            <span class="term">/ month</span>
+          </div>
+          <ul class="specs-list">
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 8 High-Clock vCPU Cores</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 16,384 MB RAM</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 250 GB NVMe Gen4 Storage</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Priority Uplink & SLA</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 10Gbps Burst Uplink</li>
+          </ul>
+          <a href="https://vps.lunars.indevs.in" class="btn-secondary link-panel-deploy">Deploy Enterprise</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-head">
+        <h2>Engineered for High Reliability</h2>
+        <p>Enterprise virtualization features built right into the core orchestrator.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-box glass">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          </div>
+          <h3>Dedicated Kernel Isolation</h3>
+          <p>Unlike shared container hosts, HVM executes its own isolated Linux or Windows kernel. Install custom kernel modules, swap, and virtualization.</p>
+        </div>
+
+        <div class="feature-box glass">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3>Instant 1-Click Provisioning</h3>
+          <p>Automated IP allocation, pre-cached OS templates, and high-speed VirtIO disk initialization deploy your server in under 15 seconds.</p>
+        </div>
+
+        <div class="feature-box glass">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Always-On Anti-DDoS</h3>
+          <p>Multi-terabit automated DDoS mitigation shields your virtual machines from volumetric layer 3, 4, and 7 network attacks.</p>
+        </div>
+
+        <div class="feature-box glass">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </div>
+          <h3>In-Browser Web Serial Console</h3>
+          <p>Never lock yourself out again. Access your VPS directly from your browser via our low-latency serial out-of-band emergency console.</p>
+        </div>
+
+        <div class="feature-box glass">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h3>Multi-Node Clustered Network</h3>
+          <p>Connect and distribute worker nodes across regions. Intelligent auto-schedulers place your VMs on the least loaded hypervisor.</p>
+        </div>
+
+        <div class="feature-box glass">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <h3>Docker & LXC Hybrid Mode</h3>
+          <p>Need ultra-dense micro-containers alongside heavy HVM instances? Our dual-engine agent manages both on the same worker node.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Cluster Monitor Card -->
+  <section class="section" id="monitor">
+    <div class="container">
+      <div class="monitor-card glass">
+        <div class="monitor-header">
+          <div>
+            <h3 style="font-size: 1.4rem; font-weight: 800; color: #fff;">Live Cluster Health & Telemetry</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Real-time heartbeat synchronized with the Master Controller</p>
+          </div>
+          <a href="https://vps.lunars.indevs.in" class="btn-primary link-panel">
+            <span>Access Master Panel</span>
+          </a>
+        </div>
+
+        <div class="monitor-grid">
+          <div class="monitor-stat">
+            <div class="val" style="color: #34d399;">100% Active</div>
+            <div class="lbl">Hypervisor Heartbeat</div>
+          </div>
+          <div class="monitor-stat">
+            <div class="val">HVM (KVM / QEMU)</div>
+            <div class="lbl">Active Driver Engine</div>
+          </div>
+          <div class="monitor-stat">
+            <div class="val" style="color: #38bdf8;">VirtIO NVMe</div>
+            <div class="lbl">Storage Controller</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="section" id="faq">
+    <div class="container">
+      <div class="section-head">
+        <h2>Frequently Asked Questions</h2>
+        <p>Everything you need to know about our HVM cloud platform.</p>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-card glass">
+          <h4>What is the difference between HVM and Containers?</h4>
+          <p>HVM (Hardware Virtual Machine) runs a completely isolated operating system kernel via KVM/QEMU with dedicated virtual hardware. Containers share the host kernel. HVM allows running Windows, custom kernels, Docker, and VPNs.</p>
+        </div>
+        <div class="faq-card glass">
+          <h4>How do I log into my virtual machine?</h4>
+          <p>You can access your VPS instantly via standard SSH using your IPv4 address and root credentials, or via the interactive Web Serial Console directly inside the Master Panel.</p>
+        </div>
+        <div class="faq-card glass">
+          <h4>Can I upgrade or resize my VPS later?</h4>
+          <p>Yes. You can scale CPU cores, RAM, and NVMe disk space anytime from the control panel with zero data loss.</p>
+        </div>
+        <div class="faq-card glass">
+          <h4>Where do I find support or report issues?</h4>
+          <p>You can connect with our community and support team through our official Discord and community channels.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-wrap">
+      <div class="footer-copy">
+        &copy; 2026 <span class="company-name">Lunar Infrastructure Networks</span>. All rights reserved. Powered by <span class="brand-name">Lunar Cloud HVM</span>.
+      </div>
+      <div class="footer-links">
+        <a href="https://vps.lunars.indevs.in" class="link-panel">Master Panel</a>
+        <a href="https://vps.lunars.indevs.in" class="link-support">Community & Support</a>
+        <a href="#plans">Compute Plans</a>
+        <a href="#features">Virtualization</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

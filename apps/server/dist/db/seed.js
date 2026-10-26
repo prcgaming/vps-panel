@@ -21,85 +21,109 @@ export function seedDatabase() {
     `).run('user-demo-client', 'user@vpspanel.local', userPass, 'user', 'Client User');
         console.log(`[Seed] Super Admin user created: ${adminEmail}`);
     }
-    // 2. Seed Standard OS Templates (Docker & Hypervisor base images)
+    // 2. Seed Standard OS Templates (HVM & Container base images)
     const templateCount = db.prepare('SELECT COUNT(*) as c FROM os_templates').get().c;
     if (templateCount === 0) {
         const templates = [
             {
-                id: 'tmpl-ubuntu-2404',
-                name: 'Ubuntu 24.04 LTS (Noble)',
+                id: 'tmpl-ubuntu-2404-hvm',
+                name: 'Ubuntu 24.04 LTS (HVM - Full KVM Virtualization)',
                 distro: 'Ubuntu',
                 version: '24.04',
                 image_ref: 'ubuntu:24.04',
+                virt_type: 'hvm',
                 min_ram_mb: 1024,
                 min_disk_gb: 15,
                 default_user: 'root',
                 icon: 'ubuntu'
             },
             {
-                id: 'tmpl-ubuntu-2204',
-                name: 'Ubuntu 22.04 LTS (Jammy)',
-                distro: 'Ubuntu',
-                version: '22.04',
-                image_ref: 'ubuntu:22.04',
-                min_ram_mb: 1024,
-                min_disk_gb: 10,
-                default_user: 'root',
-                icon: 'ubuntu'
-            },
-            {
-                id: 'tmpl-debian-12',
-                name: 'Debian 12 (Bookworm)',
+                id: 'tmpl-debian-12-hvm',
+                name: 'Debian 12 Bookworm (HVM - Full KVM Virtualization)',
                 distro: 'Debian',
                 version: '12',
-                image_ref: 'debian:12-slim',
+                image_ref: 'debian:12',
+                virt_type: 'hvm',
                 min_ram_mb: 512,
                 min_disk_gb: 10,
                 default_user: 'root',
                 icon: 'debian'
             },
             {
-                id: 'tmpl-alpine-320',
-                name: 'Alpine Linux 3.20 (Ultra Lightweight)',
+                id: 'tmpl-alpine-320-hvm',
+                name: 'Alpine Linux 3.20 (HVM - Ultra Fast & Secure)',
                 distro: 'Alpine',
                 version: '3.20',
                 image_ref: 'alpine:3.20',
+                virt_type: 'hvm',
                 min_ram_mb: 256,
                 min_disk_gb: 5,
                 default_user: 'root',
                 icon: 'alpine'
             },
             {
-                id: 'tmpl-rocky-9',
-                name: 'Rocky Linux 9 (Enterprise RHEL)',
-                distro: 'Rocky',
-                version: '9',
-                image_ref: 'rockylinux:9',
-                min_ram_mb: 1024,
-                min_disk_gb: 20,
-                default_user: 'root',
-                icon: 'rocky'
+                id: 'tmpl-windows-2022-hvm',
+                name: 'Windows Server 2022 (HVM - Dedicated KVM Virtual Machine)',
+                distro: 'Windows',
+                version: '2022',
+                image_ref: 'windows:2022-standard',
+                virt_type: 'hvm',
+                min_ram_mb: 4096,
+                min_disk_gb: 40,
+                default_user: 'Administrator',
+                icon: 'windows'
             },
             {
-                id: 'tmpl-arch',
-                name: 'Arch Linux (Rolling Release)',
+                id: 'tmpl-arch-hvm',
+                name: 'Arch Linux (HVM - Rolling Release KVM)',
                 distro: 'Arch',
                 version: 'latest',
                 image_ref: 'archlinux:latest',
+                virt_type: 'hvm',
                 min_ram_mb: 1024,
                 min_disk_gb: 15,
                 default_user: 'root',
                 icon: 'arch'
+            },
+            {
+                id: 'tmpl-ubuntu-2404-container',
+                name: 'Ubuntu 24.04 (LXC / System Container)',
+                distro: 'Ubuntu',
+                version: '24.04',
+                image_ref: 'ubuntu:24.04',
+                virt_type: 'container',
+                min_ram_mb: 512,
+                min_disk_gb: 10,
+                default_user: 'root',
+                icon: 'ubuntu'
+            },
+            {
+                id: 'tmpl-alpine-container',
+                name: 'Alpine 3.20 (LXC / Micro Container)',
+                distro: 'Alpine',
+                version: '3.20',
+                image_ref: 'alpine:3.20',
+                virt_type: 'container',
+                min_ram_mb: 256,
+                min_disk_gb: 5,
+                default_user: 'root',
+                icon: 'alpine'
             }
         ];
         const insertTemplate = db.prepare(`
-      INSERT INTO os_templates (id, name, distro, version, image_ref, min_ram_mb, min_disk_gb, default_user, icon)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO os_templates (id, name, distro, version, image_ref, virt_type, min_ram_mb, min_disk_gb, default_user, icon)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
         for (const t of templates) {
-            insertTemplate.run(t.id, t.name, t.distro, t.version, t.image_ref, t.min_ram_mb, t.min_disk_gb, t.default_user, t.icon);
+            insertTemplate.run(t.id, t.name, t.distro, t.version, t.image_ref, t.virt_type, t.min_ram_mb, t.min_disk_gb, t.default_user, t.icon);
         }
-        console.log('[Seed] OS Templates seeded successfully');
+        console.log('[Seed] HVM & Container OS Templates seeded successfully');
+    }
+    else {
+        try {
+            db.exec("UPDATE os_templates SET virt_type = 'hvm' WHERE virt_type IS NULL OR virt_type = '';");
+        }
+        catch (e) { }
     }
     // 3. Seed IPAM Default Pool & Allocations
     const poolCount = db.prepare('SELECT COUNT(*) as c FROM ip_pools').get().c;
@@ -127,7 +151,7 @@ export function seedDatabase() {
         const hostName = os.hostname() || 'master-node';
         const localToken = process.env.NODE_TOKEN || 'local-node-master-token';
         const serverPublicIp = process.env.PUBLIC_IP || '127.0.0.1';
-        const selectedDriver = process.env.DRIVER || 'docker';
+        const selectedDriver = process.env.DRIVER || 'kvm';
         db.prepare(`
       INSERT INTO nodes (id, name, hostname, ip_address, port, auth_token, status, driver, cpu_cores, ram_total, disk_total, vps_count, is_drained)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -145,12 +169,12 @@ export function seedDatabase() {
         support_url: process.env.SUPPORT_URL || 'https://vps.lunars.indevs.in',
         primary_color: process.env.PRIMARY_COLOR || '#06b6d4',
         theme_preset: process.env.THEME_PRESET || 'cyber-cyan',
-        default_driver: process.env.DRIVER || 'docker',
-        welcome_message: 'Welcome to Lunar Multi-Node VPS Control Panel',
+        default_driver: process.env.DRIVER || 'kvm',
+        welcome_message: 'Welcome to Lunar HVM Cloud VPS Control Panel',
         allow_registration: '1',
         allow_user_create_vps: '1',
         allow_user_manage_power: '1',
-        max_vps_per_user: '2',
+        max_vps_per_user: '5',
         panel_logo_url: ''
     };
     for (const [key, val] of Object.entries(defaultSettings)) {
@@ -158,19 +182,11 @@ export function seedDatabase() {
       INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)
     `).run(key, val);
     }
-    // 6. Seed Initial License Key
-    const activeLicense = db.prepare('SELECT id FROM license_info WHERE id = ?').get('active_license');
-    if (!activeLicense) {
-        const initialKey = process.env.LICENSE_KEY || 'LUNAR-30DAY-PRO-UNLIMITED';
-        const isLifetime = initialKey.includes('LIFETIME') || initialKey.startsWith('LIFE-');
-        const now = new Date();
-        const expiresAt = isLifetime ? null : new Date(now.getTime() + 30 * 24 * 3600 * 1000).toISOString();
-        db.prepare(`
-      INSERT INTO license_info (id, license_key, plan_type, status, activated_at, expires_at, max_nodes, max_vps, registered_to)
-      VALUES ('active_license', ?, ?, 'active', ?, ?, -1, -1, 'Lunar Administrator')
-    `).run(initialKey, isLifetime ? 'lifetime' : 'trial_30d', now.toISOString(), expiresAt);
-        console.log(`[Seed] License activated: ${initialKey} (${isLifetime ? 'Lifetime' : '30 Days'})`);
-    }
+    // 6. Permanent Free & Unlimited License (No License Restrictions)
+    db.prepare(`
+    INSERT OR REPLACE INTO license_info (id, license_key, plan_type, status, activated_at, expires_at, max_nodes, max_vps, registered_to)
+    VALUES ('active_license', 'OPEN-COMMUNITY-UNLIMITED', 'lifetime', 'active', CURRENT_TIMESTAMP, NULL, -1, -1, 'Open Community Edition')
+  `).run();
 }
 // Allow standalone running
 if (process.argv[1]?.endsWith('seed.ts') || process.argv[1]?.endsWith('seed.js')) {

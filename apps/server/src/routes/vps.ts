@@ -35,6 +35,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
   const {
     name,
     hostname,
+    virt_type = 'hvm',
     os_image = 'ubuntu:24.04',
     cpu_cores = 1,
     ram_mb = 1024,
@@ -120,11 +121,11 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
   // Insert into DB as creating
   db.prepare(`
     INSERT INTO vps_instances (
-      id, name, hostname, node_id, user_id, status, os_image, 
+      id, name, hostname, node_id, user_id, status, virt_type, os_image, 
       cpu_cores, ram_mb, disk_gb, ip_address, gateway, netmask, root_password, ssh_key
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    vpsId, name, hostname, targetNodeId, user.id, 'creating', os_image,
+    vpsId, name, hostname, targetNodeId, user.id, 'creating', virt_type, os_image,
     cpu_cores, ram_mb, disk_gb, assignedIp, assignedGateway, assignedNetmask, password, ssh_key || ''
   );
 
@@ -137,7 +138,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
   db.prepare(`
     INSERT INTO activity_logs (id, user_id, action, target_type, target_id, details, ip_address)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created VPS ${name} (${assignedIp}) on node ${targetNodeId}`, req.ip || '127.0.0.1');
+  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created ${virt_type.toUpperCase()} VPS ${name} (${assignedIp}) on node ${targetNodeId}`, req.ip || '127.0.0.1');
 
   // 3. Dispatch creation to node agent if connected
   try {
@@ -146,6 +147,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
         id: vpsId,
         name,
         hostname,
+        virt_type,
         os_image,
         cpu_cores,
         ram_mb,

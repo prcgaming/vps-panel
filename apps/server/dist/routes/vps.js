@@ -27,7 +27,7 @@ router.get('/', authenticate, (req, res) => {
 // POST /api/vps - Create new VPS instance
 router.post('/', authenticate, async (req, res) => {
     const user = req.user;
-    const { name, hostname, os_image = 'ubuntu:24.04', cpu_cores = 1, ram_mb = 1024, disk_gb = 20, node_id, // optional: if not supplied, auto-scheduler chooses least loaded node
+    const { name, hostname, virt_type = 'hvm', os_image = 'ubuntu:24.04', cpu_cores = 1, ram_mb = 1024, disk_gb = 20, node_id, // optional: if not supplied, auto-scheduler chooses least loaded node
     root_password, ssh_key } = req.body;
     if (!name || !hostname) {
         res.status(400).json({ error: 'Name and hostname are required' });
@@ -96,10 +96,10 @@ router.post('/', authenticate, async (req, res) => {
     // Insert into DB as creating
     db.prepare(`
     INSERT INTO vps_instances (
-      id, name, hostname, node_id, user_id, status, os_image, 
+      id, name, hostname, node_id, user_id, status, virt_type, os_image, 
       cpu_cores, ram_mb, disk_gb, ip_address, gateway, netmask, root_password, ssh_key
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(vpsId, name, hostname, targetNodeId, user.id, 'creating', os_image, cpu_cores, ram_mb, disk_gb, assignedIp, assignedGateway, assignedNetmask, password, ssh_key || '');
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(vpsId, name, hostname, targetNodeId, user.id, 'creating', virt_type, os_image, cpu_cores, ram_mb, disk_gb, assignedIp, assignedGateway, assignedNetmask, password, ssh_key || '');
     // Mark IP as used
     if (freeIp) {
         db.prepare('UPDATE ip_allocations SET vps_id = ? WHERE id = ?').run(vpsId, freeIp.id);
@@ -108,7 +108,7 @@ router.post('/', authenticate, async (req, res) => {
     db.prepare(`
     INSERT INTO activity_logs (id, user_id, action, target_type, target_id, details, ip_address)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created VPS ${name} (${assignedIp}) on node ${targetNodeId}`, req.ip || '127.0.0.1');
+  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created ${virt_type.toUpperCase()} VPS ${name} (${assignedIp}) on node ${targetNodeId}`, req.ip || '127.0.0.1');
     // 3. Dispatch creation to node agent if connected
     try {
         if (wsHub.isNodeOnline(targetNodeId)) {
@@ -116,6 +116,7 @@ router.post('/', authenticate, async (req, res) => {
                 id: vpsId,
                 name,
                 hostname,
+                virt_type,
                 os_image,
                 cpu_cores,
                 ram_mb,
