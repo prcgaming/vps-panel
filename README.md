@@ -66,23 +66,25 @@ When you run the command, the installer displays an interactive numbered menu:
 ```text
 Select what you would like to do:
 
-  [0] Install Complete VPS Panel (Panel + Local HVM Node - Ready to create VPS!)
-  [1] Install Worker Node Daemon Only (Connect an external server as a worker node)
+  [1] Install Complete VPS Panel (Recommended - Panel + Built-in Local HVM Node - Ready to create VPS!)
   [2] Install Public Hosting Website / Client Portal (Root domain e.g. lunars.indevs.in)
-  [3] Configure Cloudflare Domain & Nginx SSL for Panel
-  [4] Check Status & Health
-  [5] Update VPS Panel to Latest GitHub Release
-  [6] Restart Services
-  [7] View Realtime Logs
-  [8] Uninstall Panel
-  [9] Exit
+  [3] Connect External Worker Node (Only for 2nd/external servers - requires join token from panel)
+  [4] Configure Cloudflare Domain & Nginx SSL for Panel
+  [5] Check Status & Health
+  [6] Update VPS Panel to Latest GitHub Release
+  [7] Restart Services
+  [8] View Realtime Logs
+  [9] Uninstall Panel
+  [0] Exit
 
-Input 0-9 [default: 0]:
+Input 1-9 (or press Enter for [1]):
 ```
 
-👉 **Choose Option `[0]`** (or simply press **Enter**, as `0` is the default)!
+👉 **Choose Option `[1]`** (or simply press **Enter**, as `1` is the default)!
 
-#### Step-by-Step Questions Answered in Option `0`:
+> 💡 **No Worker Node Token Needed:** The Master Panel includes its own built-in hypervisor node automatically. Join tokens are **only** needed if you are adding a secondary/external server later under **Nodes** in your dashboard.
+
+#### Step-by-Step Questions Answered in Option `1`:
 
 | Step / Prompt | What to Enter / Recommended Choice |
 |---|---|

@@ -609,7 +609,9 @@ install_panel() {
   local local_public_ip=$(get_public_ip)
 
   # Interactive Setup Wizard
-  echo -e "${CYAN}${BOLD}[+] VPS Panel Interactive Setup Wizard:${NC}\n"
+  echo -e "${CYAN}${BOLD}[+] VPS Panel All-In-One Setup Wizard (Master Panel + Built-in Local HVM Node):${NC}"
+  echo -e "${NC}This server will run both your Master Panel AND your primary hypervisor to create VPS.${NC}"
+  echo -e "${GREEN}All-in-one installation: No external worker node or join token is needed!${NC}\n"
 
   # 1. Domain Configuration
   if [ -n "$PANEL_DOMAIN" ]; then
@@ -784,7 +786,7 @@ ENVEOF
   # --------------------------------------------------------------------------
   # Setup Local Worker Node Daemon (Apps/Agent)
   # --------------------------------------------------------------------------
-  echo -e "\n${YELLOW}[*] Configuring Local Hypervisor Agent on this machine...${NC}"
+  echo -e "\n${YELLOW}[*] Configuring Built-in Hypervisor Agent on this machine (automatic local token generated)...${NC}"
   cd "$INSTALL_DIR/apps/agent"
   npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
 
@@ -966,8 +968,17 @@ install_node_daemon() {
   fi
 
   if [ -z "$MASTER_URL_INPUT" ] || [ -z "$TOKEN_INPUT" ]; then
-    echo -e "${RED}[ERROR] Both Master Panel URL and Join Token are required to connect a worker node!${NC}"
-    exit 1
+    echo -e "\n${YELLOW}[!] Note: A Worker Node Join Token is ONLY required when connecting a SECOND or EXTERNAL server to an existing panel.${NC}"
+    echo -e "${CYAN}If this is your main server and you are trying to install the VPS Panel, you do NOT need a token!${NC}\n"
+    read -r -p "Would you like to install the Complete Master VPS Panel on this server now? [Y/n]: " FALLBACK_CHOICE
+    FALLBACK_CHOICE=$(echo "${FALLBACK_CHOICE:-y}" | tr '[:upper:]' '[:lower:]')
+    if [[ "$FALLBACK_CHOICE" =~ ^(y|yes)$ ]]; then
+      install_panel
+      return 0
+    else
+      echo -e "${RED}[ERROR] Join token missing. To connect an external worker node, generate a join token inside your Master Panel under 'Nodes' -> 'Connect New Node'.${NC}"
+      exit 1
+    fi
   fi
 
   install_dependencies
@@ -1412,24 +1423,38 @@ print_banner
 check_root
 
 echo -e "${BOLD}Select what you would like to do:${NC}\n"
-echo -e "  ${CYAN}[0]${NC} ${BOLD}Install Complete VPS Panel${NC} (Panel + Local HVM Node - Ready to create VPS!)"
-echo -e "  ${CYAN}[1]${NC} ${BOLD}Install Worker Node Daemon Only${NC} (Connect an external server as a worker node)"
+echo -e "  ${CYAN}[1]${NC} ${BOLD}Install Complete VPS Panel${NC} (Recommended - Panel + Built-in Local HVM Node - Ready to create VPS!)"
 echo -e "  ${CYAN}[2]${NC} ${BOLD}Install Public Hosting Website / Client Portal${NC} (Root domain e.g. lunars.indevs.in)"
-echo -e "  ${CYAN}[3]${NC} ${BOLD}Configure Cloudflare Domain & Nginx SSL for Panel${NC}"
-echo -e "  ${CYAN}[4]${NC} ${BOLD}Check Status & Health${NC}"
-echo -e "  ${CYAN}[5]${NC} ${BOLD}Update VPS Panel to Latest GitHub Release${NC}"
-echo -e "  ${CYAN}[6]${NC} ${BOLD}Restart Services${NC}"
-echo -e "  ${CYAN}[7]${NC} ${BOLD}View Realtime Logs${NC}"
-echo -e "  ${CYAN}[8]${NC} ${BOLD}Uninstall Panel${NC}"
-echo -e "  ${CYAN}[9]${NC} Exit\n"
-read -r -p "Input 0-9 [default: 0]: " ACTION
-ACTION_CHOICE=${ACTION:-0}
+echo -e "  ${CYAN}[3]${NC} ${BOLD}Connect External Worker Node${NC} (Only for 2nd/external servers - requires join token from panel)"
+echo -e "  ${CYAN}[4]${NC} ${BOLD}Configure Cloudflare Domain & Nginx SSL for Panel${NC}"
+echo -e "  ${CYAN}[5]${NC} ${BOLD}Check Status & Health${NC}"
+echo -e "  ${CYAN}[6]${NC} ${BOLD}Update VPS Panel to Latest GitHub Release${NC}"
+echo -e "  ${CYAN}[7]${NC} ${BOLD}Restart Services${NC}"
+echo -e "  ${CYAN}[8]${NC} ${BOLD}View Realtime Logs${NC}"
+echo -e "  ${CYAN}[9]${NC} ${BOLD}Uninstall Panel${NC}"
+echo -e "  ${CYAN}[0]${NC} Exit\n"
+read -r -p "Input 1-9 (or press Enter for [1]): " ACTION
+ACTION_CHOICE=${ACTION:-1}
 
 case "$ACTION_CHOICE" in
-  0) install_panel ;;
-  1) install_node_daemon ;;
+  1) install_panel ;;
+  0)
+    if [ "$ACTION" = "0" ]; then
+      read -r -p "Did you want to [1] Install Complete VPS Panel or [0] Exit? [1/0, default: 1]: " ZERO_CHOICE
+      ZERO_CHOICE=${ZERO_CHOICE:-1}
+      if [ "$ZERO_CHOICE" = "1" ]; then
+        install_panel
+        exit 0
+      fi
+    else
+      install_panel
+      exit 0
+    fi
+    echo "Exiting."; exit 0
+    ;;
   2) install_web_portal ;;
-  3)
+  3) install_node_daemon ;;
+  4)
     read -r -p "Enter Domain (e.g. vps.lunars.indevs.in): " DOMAIN_NAME
     if [ ! -f "$INSTALL_DIR/apps/server/package.json" ]; then
       PANEL_DOMAIN="$DOMAIN_NAME"
@@ -1438,11 +1463,10 @@ case "$ACTION_CHOICE" in
       setup_nginx_domain "$DOMAIN_NAME"
     fi
     ;;
-  4) cmd_status ;;
-  5) cmd_update ;;
-  6) cmd_restart ;;
-  7) cmd_logs ;;
-  8) cmd_uninstall ;;
-  9) echo "Exiting."; exit 0 ;;
+  5) cmd_status ;;
+  6) cmd_update ;;
+  7) cmd_restart ;;
+  8) cmd_logs ;;
+  9) cmd_uninstall ;;
   *) echo -e "${RED}Invalid selection!${NC}"; exit 1 ;;
 esac
