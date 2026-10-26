@@ -7,7 +7,7 @@
     supportUrl: 'https://vps.lunars.indevs.in'
   };
 
-  async function loadConfig() {
+    async function loadConfig() {
     try {
       const res = await fetch('config.json');
       if (res.ok) {
@@ -16,6 +16,15 @@
       }
     } catch (e) {
       console.log('Using default embedded portal configuration');
+    }
+
+    // Auto-detect Codespaces, CodeSandbox, or local port forwarding
+    if (window.location.hostname.includes('.app.github.dev')) {
+      config.panelUrl = window.location.origin.replace('-3000.', '-4000.');
+    } else if (window.location.hostname.includes('csb.app') || window.location.hostname.includes('codesandbox.io')) {
+      config.panelUrl = `${window.location.protocol}//${window.location.hostname.replace('3000', '4000')}`;
+    } else if (window.location.port === '3000') {
+      config.panelUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
     }
 
     applyConfigToDOM();

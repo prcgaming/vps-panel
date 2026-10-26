@@ -88,14 +88,28 @@ Input 1-9 (or press Enter for [1]):
 
 | Step / Prompt | What to Enter / Recommended Choice |
 |---|---|
-| **1. Domain Name** | Enter your panel subdomain (e.g. `vps.lunars.indevs.in`) or press Enter to use server IP. |
-| **2. Public Website `[y/N]`** | Type **`y`** if you want to deploy the public hosting website on your root domain (e.g. `lunars.indevs.in`), or **`N`** for panel only. |
+| **1. Domain Name** | Enter your panel subdomain (e.g. `vps.lunars.indevs.in`) or **press [Enter]** to automatically detect and use your **Server IP** (ideal for GitHub Codespaces, CodeSandbox, or servers without a domain). |
+| **2. Public Website `[y/N]`** | Type **`y`** if you want the public hosting portal. If using a domain, it runs on port 80/443 (e.g. `lunars.indevs.in`). If using IP / Codespaces / CodeSandbox, it runs on port **`3000`**! |
 | **3. Brand Name** | Enter your hosting company or brand name (e.g. `Lunar Cloud HVM`). |
 | **4. Hypervisor Engine** | Choose **`1`** for **Dedicated HVM (KVM / QEMU)** (Supports Windows, Linux, Desktop GUI & Custom ISO). |
 | **5. Design Theme** | Choose your favorite starting theme preset (e.g. `1` for Cyber Cyan, `2` for Electric Indigo, `7` for OLED Black). |
 | **6. Admin Account** | Enter your **Admin Email** and **Password** for dashboard login. |
 
-The installer will then automatically install Node.js, KVM packages, build the panel, configure Nginx SSL, seed OS templates, and start all services!
+The installer will then automatically install Node.js, KVM packages, build the panel, configure SSL / ports, seed OS templates, and start all services!
+
+---
+
+### 🌐 GitHub Codespaces, CodeSandbox & Direct IP Mode (Multi-Port)
+
+You don't need a custom domain or root port 80/443 to run the full stack! When installing on **GitHub Codespaces**, **CodeSandbox**, or a VPS with raw IP:
+
+1. **Auto-Detect IP**: Press **[Enter]** at the domain prompt — the script automatically detects your public IP or container environment.
+2. **Dedicated Port Separation**:
+   - **Port `4000`**: Master Control Panel (`http://<ip>:4000`)
+   - **Port `3000`**: Public Cloud Hosting Website (`http://<ip>:3000`)
+3. **Automatic Forwarding**:
+   - **In GitHub Codespaces**: Forward Ports `3000` and `4000` in the "Ports" tab — GitHub automatically generates HTTPS preview URLs (`https://<id>-3000.app.github.dev` and `https://<id>-4000.app.github.dev`)!
+   - **In CodeSandbox**: Both ports open in sandbox preview tabs with live telemetry auto-linked!
 
 ---
 
@@ -255,7 +269,8 @@ vps-panel install-web lunars.indevs.in https://vps.lunars.indevs.in
 |---|---|---|
 | `80` | TCP | HTTP Web Traffic (Nginx Reverse Proxy) |
 | `443` | TCP | HTTPS Encrypted Web Traffic & WebSocket Console |
-| `4000` | TCP | Master Controller Internal API (Localhost / Reverse Proxy) |
+| `3000` | TCP | Public Cloud Hosting Website (Codespaces / CodeSandbox / Direct IP) |
+| `4000` | TCP | Master Controller Panel (Web UI & Internal API) |
 | `4001` | TCP | Worker Node Daemon (Telemetry & Remote Orchestration) |
 | `5900-5999` | TCP | Dedicated VNC Display Ports for Windows & GUI Guests |
 

@@ -78,7 +78,17 @@ detect_system() {
 
 get_public_ip() {
   local ip=""
-  ip=$(curl -s -m 5 https://api.ipify.org 2>/dev/null || curl -s -m 5 https://ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+  # Try public IP services with short timeout
+  ip=$(curl -s -m 3 https://api.ipify.org 2>/dev/null || curl -s -m 3 https://ifconfig.me 2>/dev/null || curl -s -m 3 https://icanhazip.com 2>/dev/null)
+  ip=$(echo "$ip" | tr -d ' \r\n')
+
+  # Fallback to local network interface or container IP if public lookup fails
+  if [ -z "$ip" ] || [[ "$ip" =~ ^(127\.) ]]; then
+    local iface_ip=$(hostname -I 2>/dev/null | awk '{print $1}' | tr -d ' \r\n')
+    if [ -n "$iface_ip" ]; then
+      ip="$iface_ip"
+    fi
+  fi
   echo "${ip:-127.0.0.1}"
 }
 
@@ -493,6 +503,68 @@ install_web_portal() {
   fi
 
   setup_nginx_web_portal "$WEB_DOMAIN" "$LINKED_PANEL_URL" "$BRAND_NAME"
+  start_vps_web_service "3000" "$LINKED_PANEL_URL" "$BRAND_NAME"
+}
+
+# ------------------------------------------------------------------------------
+# Start Public Website Service (Dedicated Node HTTP Server on Port 3000)
+# ------------------------------------------------------------------------------
+start_vps_web_service() {
+  local WEB_PORT="${1:-3000}"
+  local LINKED_PANEL_URL="$2"
+  local BRAND_NAME="${3:-Lunar Cloud HVM}"
+
+  mkdir -p /var/www/vps-panel-web
+  if [ -d "$INSTALL_DIR/apps/web" ]; then
+    cp -r "$INSTALL_DIR/apps/web/"* /var/www/vps-panel-web/ 2>/dev/null || true
+  fi
+
+  cat > /var/www/vps-panel-web/config.json << WEBCONFIGEOF
+{
+  "panelUrl": "${LINKED_PANEL_URL}",
+  "brandName": "${BRAND_NAME}",
+  "companyName": "${BRAND_NAME}",
+  "supportUrl": "${LINKED_PANEL_URL}"
+}
+WEBCONFIGEOF
+
+  if [ -f "$INSTALL_DIR/apps/web/config.json" ]; then
+    cp /var/www/vps-panel-web/config.json "$INSTALL_DIR/apps/web/config.json" 2>/dev/null || true
+  fi
+
+  echo -e "\n${YELLOW}[*] Starting Public Website server on port ${BOLD}${WEB_PORT}${NC}..."
+  if is_systemd; then
+    cat > /etc/systemd/system/vps-web.service << WEBSERVICEOF
+[Unit]
+Description=VPS Panel Public Web Portal
+After=network.target vps-panel.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$INSTALL_DIR/apps/web
+Environment=WEB_PORT=$WEB_PORT
+Environment=HOST=0.0.0.0
+ExecStart=/usr/bin/env node server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+WEBSERVICEOF
+
+    systemctl daemon-reload
+    systemctl enable vps-web 2>/dev/null || true
+    systemctl restart vps-web 2>/dev/null || true
+  else
+    if command -v pm2 >/dev/null 2>&1; then
+      pm2 delete vps-web 2>/dev/null || true
+      PORT=$WEB_PORT WEB_PORT=$WEB_PORT pm2 start "$INSTALL_DIR/apps/web/server.js" --name vps-web --cwd "$INSTALL_DIR/apps/web" 2>/dev/null || true
+    else
+      pkill -f "node server.js" 2>/dev/null || true
+      cd "$INSTALL_DIR/apps/web" && PORT=$WEB_PORT WEB_PORT=$WEB_PORT nohup node server.js > /var/log/vps-web.log 2>&1 &
+    fi
+  fi
 }
 
 # ------------------------------------------------------------------------------
@@ -618,8 +690,17 @@ install_panel() {
     read -r -p "Enter Domain for Panel [$PANEL_DOMAIN]: " FQDN_INPUT
     PANEL_DOMAIN=${FQDN_INPUT:-$PANEL_DOMAIN}
   else
-    read -r -p "Enter Domain for Panel (e.g. vps.lunars.indevs.in) [press Enter for Server IP $local_public_ip]: " FQDN_INPUT
-    PANEL_DOMAIN=${FQDN_INPUT:-""}
+    echo -e "${BOLD}1. Domain Configuration:${NC}"
+    echo -e "  Enter your domain (e.g. ${CYAN}vps.lunars.indevs.in${NC}), or simply press [Enter] to"
+    read -r -p "  auto-fetch & use Server IP [Press Enter for $local_public_ip]: " FQDN_INPUT
+    if [ -z "$FQDN_INPUT" ]; then
+      PANEL_DOMAIN=""
+      echo -e "  ${GREEN}✓ Auto-using Server IP: ${BOLD}${local_public_ip}${NC}"
+      echo -e "  ${CYAN}[i] Panel will run directly on: http://${local_public_ip}:4000${NC}\n"
+    else
+      PANEL_DOMAIN="$FQDN_INPUT"
+      echo -e "  ${GREEN}✓ Panel will be configured on: https://${PANEL_DOMAIN}${NC}\n"
+    fi
   fi
 
   # 2. Panel Title / Brand
@@ -686,25 +767,36 @@ install_panel() {
   read -r -p "Enter Panel Internal Port [4000]: " PORT_INPUT
   PANEL_PORT=${PORT_INPUT:-4000}
 
-  # 7. Public Hosting Website & Client Portal (Root Domain)
+  # 7. Public Hosting Website & Client Portal (Root Domain or Dedicated Port 3000)
   echo -e "\n${BOLD}Public Hosting Website / Client Portal:${NC}"
   echo -e "  A modern public-facing cloud hosting landing page (apps/web) with live cluster"
   echo -e "  telemetry, HVM pricing plans, and client login deep-links."
   read -r -p "Do you also want to install the public hosting website? [y/N]: " INSTALL_WEB_CHOICE
   INSTALL_WEB_CHOICE=$(echo "${INSTALL_WEB_CHOICE:-n}" | tr '[:upper:]' '[:lower:]')
 
+  WEB_PORT="3000"
+  INSTALL_WEB_DOMAIN=""
   if [[ "$INSTALL_WEB_CHOICE" =~ ^(y|yes)$ ]]; then
-    local default_web_domain="lunars.indevs.in"
     if [ -n "$PANEL_DOMAIN" ]; then
+      local default_web_domain="lunars.indevs.in"
       if [[ "$PANEL_DOMAIN" =~ ^[^\.]+\.(.+\..+)$ ]]; then
         default_web_domain="${BASH_REMATCH[1]}"
       else
         default_web_domain="$PANEL_DOMAIN"
       fi
-    fi
 
-    read -r -p "Enter Domain for Website [$default_web_domain]: " WEB_DOMAIN_INPUT
-    INSTALL_WEB_DOMAIN=${WEB_DOMAIN_INPUT:-$default_web_domain}
+      read -r -p "Enter Domain for Website [$default_web_domain]: " WEB_DOMAIN_INPUT
+      INSTALL_WEB_DOMAIN=${WEB_DOMAIN_INPUT:-$default_web_domain}
+      read -r -p "Enter Port for Public Website Backend [default: 3000]: " WEB_PORT_INPUT
+      WEB_PORT=${WEB_PORT_INPUT:-3000}
+    else
+      echo -e "  ${CYAN}[i] Direct IP / Codespaces / CodeSandbox Mode (Multi-Port):${NC}"
+      read -r -p "Enter Port for Public Website [default: 3000]: " WEB_PORT_INPUT
+      WEB_PORT=${WEB_PORT_INPUT:-3000}
+      INSTALL_WEB_DOMAIN=""
+      echo -e "  ${GREEN}✓ Public Website will run on: ${BOLD}http://${local_public_ip}:${WEB_PORT}${NC}"
+      echo -e "  ${GREEN}✓ Master Control Panel will run on: ${BOLD}http://${local_public_ip}:${PANEL_PORT}${NC}"
+    fi
   fi
 
   install_dependencies
@@ -914,9 +1006,15 @@ AGENTINITEOF
 
   # Setup public hosting website if requested
   local WEB_FINAL_URL=""
-  if [[ "$INSTALL_WEB_CHOICE" =~ ^(y|yes)$ ]] && [ -n "$INSTALL_WEB_DOMAIN" ]; then
-    setup_nginx_web_portal "$INSTALL_WEB_DOMAIN" "$FINAL_URL" "$PANEL_NAME"
-    WEB_FINAL_URL="https://${INSTALL_WEB_DOMAIN}"
+  if [[ "$INSTALL_WEB_CHOICE" =~ ^(y|yes)$ ]]; then
+    if [ -n "$INSTALL_WEB_DOMAIN" ]; then
+      setup_nginx_web_portal "$INSTALL_WEB_DOMAIN" "$FINAL_URL" "$PANEL_NAME"
+      start_vps_web_service "$WEB_PORT" "$FINAL_URL" "$PANEL_NAME"
+      WEB_FINAL_URL="https://${INSTALL_WEB_DOMAIN} (Port ${WEB_PORT})"
+    else
+      start_vps_web_service "$WEB_PORT" "$FINAL_URL" "$PANEL_NAME"
+      WEB_FINAL_URL="http://${local_public_ip}:${WEB_PORT}"
+    fi
   fi
 
   # Install CLI utility
@@ -928,6 +1026,10 @@ AGENTINITEOF
   echo -e "  ${CYAN}Master Panel URL:${NC}    ${BOLD}${FINAL_URL}${NC}"
   if [ -n "$WEB_FINAL_URL" ]; then
     echo -e "  ${CYAN}Public Website URL:${NC}  ${BOLD}${WEB_FINAL_URL}${NC} (Linked to Master Panel)"
+  fi
+  if [ -z "$PANEL_DOMAIN" ]; then
+    echo -e "  ${YELLOW}Mode:${NC}                ${BOLD}Direct IP / Codespaces / CodeSandbox${NC}"
+    echo -e "  ${YELLOW}Notice:${NC}              Panel running on Port ${PANEL_PORT}, Public Web running on Port ${WEB_PORT}"
   fi
   echo -e "  ${CYAN}Admin Email:${NC}         ${BOLD}${ADMIN_EMAIL}${NC}"
   echo -e "  ${CYAN}Admin Password:${NC}      ${BOLD}${ADMIN_PASSWORD}${NC}"
@@ -1125,6 +1227,17 @@ cmd_status() {
   fi
   echo -e "  • ${BOLD}Hypervisor Worker Agent:${NC} $agent_status"
 
+  # Public Website
+  if [ -f "/etc/systemd/system/vps-web.service" ] || (command -v pm2 >/dev/null 2>&1 && pm2 list 2>/dev/null | grep -q "vps-web"); then
+    local web_status="${RED}STOPPED${NC}"
+    if is_systemd && systemctl is-active --quiet vps-web 2>/dev/null; then
+      web_status="${GREEN}ONLINE & SERVING${NC} (Port 3000)"
+    elif command -v pm2 >/dev/null 2>&1 && pm2 list 2>/dev/null | grep -q "vps-web.*online"; then
+      web_status="${GREEN}ONLINE & SERVING (PM2)${NC}"
+    fi
+    echo -e "  • ${BOLD}Public Hosting Website:${NC}  $web_status"
+  fi
+
   echo ""
   if [ -f "$INSTALL_DIR/apps/server/.env" ]; then
     local domain=$(grep '^HOST=' "$INSTALL_DIR/apps/server/.env" 2>/dev/null || echo "")
@@ -1139,12 +1252,14 @@ cmd_start() {
   echo -e "${YELLOW}[*] Starting VPS Panel services...${NC}"
   if is_systemd; then
     systemctl start vps-panel 2>/dev/null || true
+    systemctl start vps-web 2>/dev/null || true
     systemctl start nginx 2>/dev/null || true
     if systemctl is-enabled vps-agent >/dev/null 2>&1; then
       systemctl start vps-agent 2>/dev/null || true
     fi
   else
     service vps-panel start 2>/dev/null || pm2 start vps-panel 2>/dev/null || true
+    pm2 start vps-web 2>/dev/null || true
     service nginx start 2>/dev/null || true
     if [ -f "/etc/init.d/vps-agent" ]; then
       service vps-agent start 2>/dev/null || true
@@ -1158,11 +1273,13 @@ cmd_stop() {
   echo -e "${YELLOW}[*] Stopping VPS Panel services...${NC}"
   if is_systemd; then
     systemctl stop vps-panel 2>/dev/null || true
+    systemctl stop vps-web 2>/dev/null || true
     if systemctl is-active --quiet vps-agent 2>/dev/null; then
       systemctl stop vps-agent 2>/dev/null || true
     fi
   else
     service vps-panel stop 2>/dev/null || pm2 stop vps-panel 2>/dev/null || true
+    pm2 stop vps-web 2>/dev/null || true
     if [ -f "/etc/init.d/vps-agent" ]; then
       service vps-agent stop 2>/dev/null || true
     fi
@@ -1175,12 +1292,14 @@ cmd_restart() {
   echo -e "${YELLOW}[*] Restarting VPS Panel services...${NC}"
   if is_systemd; then
     systemctl restart vps-panel 2>/dev/null || true
+    systemctl restart vps-web 2>/dev/null || true
     systemctl restart nginx 2>/dev/null || true
     if systemctl is-enabled vps-agent >/dev/null 2>&1; then
       systemctl restart vps-agent 2>/dev/null || true
     fi
   else
     service vps-panel restart 2>/dev/null || pm2 restart vps-panel 2>/dev/null || true
+    pm2 restart vps-web 2>/dev/null || true
     service nginx restart 2>/dev/null || true
     if [ -f "/etc/init.d/vps-agent" ]; then
       service vps-agent restart 2>/dev/null || true
