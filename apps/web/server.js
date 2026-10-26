@@ -37,6 +37,26 @@ const server = http.createServer((req, res) => {
   let reqPath = req.url.split('?')[0];
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
 
+  // Direct settings API endpoint for public portal
+  if (reqPath === '/api/settings') {
+    const candidateSettings = [
+      path.join(__dirname, 'settings.json'),
+      '/var/www/vps-panel-web/settings.json',
+      '/opt/vps-panel/apps/web/settings.json',
+      path.resolve(__dirname, '../server/data/settings.json')
+    ];
+    for (const p of candidateSettings) {
+      if (fs.existsSync(p)) {
+        try {
+          const raw = fs.readFileSync(p, 'utf8');
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(raw);
+          return;
+        } catch {}
+      }
+    }
+  }
+
   // Sanitize path to prevent directory traversal
   const safePath = path.normalize(reqPath).replace(/^(\.\.[\/\\])+/, '');
   const filePath = path.join(__dirname, safePath);

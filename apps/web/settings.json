@@ -1,0 +1,14 @@
+{
+  "settings": {
+    "panel_name": "Lunar Client Cloud",
+    "company_name": "Lunar Cloud Infrastructure",
+    "support_url": "https://vps.lunars.indevs.in",
+    "primary_color": "#06b6d4",
+    "web_hero_badge": "Enterprise Dedicated HVM Virtualization",
+    "web_hero_title": "Next-Generation High-Performance Cloud VPS",
+    "web_hero_subtitle": "Deploy dedicated KVM Hardware Virtual Machines & high-density LXC containers with raw NVMe storage and instant setup.",
+    "web_discord_url": "https://discord.gg/",
+    "web_telegram_url": "https://t.me/",
+    "web_plans_json": "[{\"id\":\"plan-micro\",\"name\":\"Cloud Micro\",\"price\":\"$0.00 / Free Tier\",\"badge\":\"Free Tier\",\"cpu\":1,\"ram\":\"1 GB RAM\",\"disk\":\"20 GB NVMe\",\"bandwidth\":\"1 TB Bandwidth\",\"buttonText\":\"Deploy Free VPS\",\"buttonUrl\":\"\",\"isPopular\":false},{\"id\":\"plan-starter\",\"name\":\"Cloud Starter\",\"price\":\"$3.99 / mo\",\"badge\":\"Most Popular\",\"cpu\":2,\"ram\":\"2 GB RAM\",\"disk\":\"40 GB NVMe\",\"bandwidth\":\"3 TB Bandwidth\",\"buttonText\":\"Deploy Cloud VPS\",\"buttonUrl\":\"\",\"isPopular\":true},{\"id\":\"plan-pro\",\"name\":\"Cloud Power Pro\",\"price\":\"$7.99 / mo\",\"badge\":\"High Performance\",\"cpu\":4,\"ram\":\"4 GB RAM\",\"disk\":\"80 GB NVMe\",\"bandwidth\":\"5 TB Bandwidth\",\"buttonText\":\"Deploy Power Pro\",\"buttonUrl\":\"\",\"isPopular\":false},{\"id\":\"plan-enterprise\",\"name\":\"Cloud Dedicated HVM\",\"price\":\"$14.99 / mo\",\"badge\":\"Dedicated KVM\",\"cpu\":8,\"ram\":\"8 GB RAM\",\"disk\":\"160 GB NVMe\",\"bandwidth\":\"10 TB Bandwidth\",\"buttonText\":\"Deploy Enterprise\",\"buttonUrl\":\"\",\"isPopular\":false}]"
+  }
+}

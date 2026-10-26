@@ -1359,6 +1359,12 @@ cmd_update() {
   cd "$INSTALL_DIR/apps/server"
   npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
 
+  # If public website directory exists, sync updated website assets
+  if [ -d "/var/www/vps-panel-web" ] && [ -d "$INSTALL_DIR/apps/web" ]; then
+    echo -e "${YELLOW}[*] Syncing updated public website assets to /var/www/vps-panel-web...${NC}"
+    cp -r "$INSTALL_DIR/apps/web/"* /var/www/vps-panel-web/ 2>/dev/null || true
+  fi
+
   install_cli_binary
 
   echo -e "${YELLOW}[*] Reloading services...${NC}"

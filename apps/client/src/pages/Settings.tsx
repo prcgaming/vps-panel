@@ -22,14 +22,15 @@ interface WebPlanItem {
   disk: string;
   bandwidth: string;
   buttonText: string;
+  buttonUrl?: string;
   isPopular?: boolean;
 }
 
 const DEFAULT_PLANS: WebPlanItem[] = [
-  { id: 'plan-micro', name: 'Cloud Micro', price: '$0.00 / Free Tier', badge: 'Free Tier', cpu: 1, ram: '1 GB RAM', disk: '20 GB NVMe', bandwidth: '1 TB Bandwidth', buttonText: 'Deploy Free VPS', isPopular: false },
-  { id: 'plan-starter', name: 'Cloud Starter', price: '$3.99 / mo', badge: 'Most Popular', cpu: 2, ram: '2 GB RAM', disk: '40 GB NVMe', bandwidth: '3 TB Bandwidth', buttonText: 'Deploy Cloud VPS', isPopular: true },
-  { id: 'plan-pro', name: 'Cloud Power Pro', price: '$7.99 / mo', badge: 'High Performance', cpu: 4, ram: '4 GB RAM', disk: '80 GB NVMe', bandwidth: '5 TB Bandwidth', buttonText: 'Deploy Power Pro', isPopular: false },
-  { id: 'plan-enterprise', name: 'Cloud Dedicated HVM', price: '$14.99 / mo', badge: 'Dedicated KVM', cpu: 8, ram: '8 GB RAM', disk: '160 GB NVMe', bandwidth: '10 TB Bandwidth', buttonText: 'Deploy Enterprise', isPopular: false }
+  { id: 'plan-micro', name: 'Cloud Micro', price: '$0.00 / Free Tier', badge: 'Free Tier', cpu: 1, ram: '1 GB RAM', disk: '20 GB NVMe', bandwidth: '1 TB Bandwidth', buttonText: 'Deploy Free VPS', buttonUrl: '', isPopular: false },
+  { id: 'plan-starter', name: 'Cloud Starter', price: '$3.99 / mo', badge: 'Most Popular', cpu: 2, ram: '2 GB RAM', disk: '40 GB NVMe', bandwidth: '3 TB Bandwidth', buttonText: 'Deploy Cloud VPS', buttonUrl: '', isPopular: true },
+  { id: 'plan-pro', name: 'Cloud Power Pro', price: '$7.99 / mo', badge: 'High Performance', cpu: 4, ram: '4 GB RAM', disk: '80 GB NVMe', bandwidth: '5 TB Bandwidth', buttonText: 'Deploy Power Pro', buttonUrl: '', isPopular: false },
+  { id: 'plan-enterprise', name: 'Cloud Dedicated HVM', price: '$14.99 / mo', badge: 'Dedicated KVM', cpu: 8, ram: '8 GB RAM', disk: '160 GB NVMe', bandwidth: '10 TB Bandwidth', buttonText: 'Deploy Enterprise', buttonUrl: '', isPopular: false }
 ];
 
 const WALLPAPER_PRESETS = [
@@ -172,6 +173,7 @@ export const Settings: React.FC<SettingsProps> = () => {
       disk: '40 GB NVMe',
       bandwidth: '2 TB Bandwidth',
       buttonText: 'Deploy VPS',
+      buttonUrl: '',
       isPopular: false
     };
     const updated = [...plansList, newPlan];
@@ -180,10 +182,22 @@ export const Settings: React.FC<SettingsProps> = () => {
   };
 
   const handleDeletePlan = (index: number) => {
-    if (plansList.length <= 1) return alert('You must keep at least 1 pricing plan.');
     const updated = plansList.filter((_, i) => i !== index);
     setPlansList(updated);
     setSettings(prev => ({ ...prev, web_plans_json: JSON.stringify(updated) }));
+  };
+
+  const handleClearAllPlans = () => {
+    if (plansList.length === 0) return;
+    if (!confirm('Are you sure you want to remove all pricing plans? The public website will show an on-demand custom compute banner instead.')) return;
+    setPlansList([]);
+    setSettings(prev => ({ ...prev, web_plans_json: '[]' }));
+  };
+
+  const handleResetDefaultPlans = () => {
+    if (!confirm('Reset pricing plans back to default templates?')) return;
+    setPlansList(DEFAULT_PLANS);
+    setSettings(prev => ({ ...prev, web_plans_json: JSON.stringify(DEFAULT_PLANS) }));
   };
 
   const handleSaveAllSettings = async (e?: React.FormEvent) => {
@@ -670,127 +684,215 @@ export const Settings: React.FC<SettingsProps> = () => {
 
           {/* Interactive Pricing Plans Editor */}
           <div className="pt-4 border-t border-white/[0.08]">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <span>Public Pricing Plans Editor</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-300">
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${plansList.length > 0 ? 'bg-slate-800 text-cyan-300' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`}>
                     {plansList.length} Plans Active
                   </span>
                 </h3>
-                <p className="text-xs text-slate-400">These plans are displayed directly on your public website.</p>
+                <p className="text-xs text-slate-400">
+                  Manage pricing tiers shown on the public website. You can customize the deploy button text and link, or clear all plans.
+                </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleAddPlan}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition shadow-md"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Plan</span>
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleResetDefaultPlans}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition border border-white/10 shadow-sm"
+                  title="Reset to default 4 plans"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Reset Defaults</span>
+                </button>
+
+                {plansList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAllPlans}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-500/30 text-rose-300 text-xs font-semibold rounded-xl transition shadow-sm"
+                    title="Remove all pricing plans from the public site"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear All</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAddPlan}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition shadow-md"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Plan</span>
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {plansList.map((plan, idx) => (
-                <div key={plan.id || idx} className="p-4 bg-slate-900/80 border border-white/[0.08] rounded-2xl grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Plan Name</label>
-                    <input
-                      type="text"
-                      value={plan.name}
-                      onChange={(e) => handlePlanChange(idx, 'name', e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Price</label>
-                    <input
-                      type="text"
-                      value={plan.price}
-                      onChange={(e) => handlePlanChange(idx, 'price', e.target.value)}
-                      placeholder="$3.99 / mo"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-cyan-300 font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">vCPU & RAM</label>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="number"
-                        min="1"
-                        value={plan.cpu}
-                        onChange={(e) => handlePlanChange(idx, 'cpu', parseInt(e.target.value) || 1)}
-                        className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
-                      />
-                      <input
-                        type="text"
-                        value={plan.ram}
-                        onChange={(e) => handlePlanChange(idx, 'ram', e.target.value)}
-                        placeholder="2 GB RAM"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Disk & Traffic</label>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        value={plan.disk}
-                        onChange={(e) => handlePlanChange(idx, 'disk', e.target.value)}
-                        placeholder="40 GB NVMe"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Badge & Button</label>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        value={plan.badge || ''}
-                        onChange={(e) => handlePlanChange(idx, 'badge', e.target.value)}
-                        placeholder="Popular"
-                        className="w-1/2 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
-                      />
-                      <input
-                        type="text"
-                        value={plan.buttonText || ''}
-                        onChange={(e) => handlePlanChange(idx, 'buttonText', e.target.value)}
-                        placeholder="Deploy"
-                        className="w-1/2 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-4 md:pt-0">
-                    <label className="flex items-center gap-1.5 text-xs text-amber-300 font-semibold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={!!plan.isPopular}
-                        onChange={(e) => handlePlanChange(idx, 'isPopular', e.target.checked)}
-                        className="w-4 h-4 rounded text-amber-500"
-                      />
-                      <span>Popular</span>
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePlan(idx)}
-                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
-                      title="Delete Plan"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+            {plansList.length === 0 ? (
+              <div className="p-8 text-center bg-slate-900/40 border border-dashed border-white/10 rounded-2xl space-y-3">
+                <div className="w-12 h-12 mx-auto rounded-full bg-slate-800/80 border border-white/10 flex items-center justify-center text-slate-400">
+                  <Layers className="w-6 h-6" />
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold text-white">No Pricing Plans Configured</h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    All plans are currently removed. The public website will cleanly display an on-demand custom compute request banner instead of plan cards.
+                  </p>
+                </div>
+                <div className="flex justify-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAddPlan}
+                    className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add a Plan</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetDefaultPlans}
+                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 border border-white/10"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Restore Defaults</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {plansList.map((plan, idx) => (
+                  <div key={plan.id || idx} className="p-4 bg-slate-900/80 border border-white/[0.08] rounded-2xl space-y-3 hover:border-cyan-500/20 transition">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Plan Name</label>
+                        <input
+                          type="text"
+                          value={plan.name}
+                          onChange={(e) => handlePlanChange(idx, 'name', e.target.value)}
+                          placeholder="Cloud Starter"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Price Label</label>
+                        <input
+                          type="text"
+                          value={plan.price}
+                          onChange={(e) => handlePlanChange(idx, 'price', e.target.value)}
+                          placeholder="$3.99 / mo or Free"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">vCPU Cores & RAM</label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="number"
+                            min="1"
+                            value={plan.cpu}
+                            onChange={(e) => handlePlanChange(idx, 'cpu', parseInt(e.target.value) || 1)}
+                            className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
+                            title="vCPU Cores"
+                          />
+                          <input
+                            type="text"
+                            value={plan.ram}
+                            onChange={(e) => handlePlanChange(idx, 'ram', e.target.value)}
+                            placeholder="2 GB RAM"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">NVMe Disk & Bandwidth</label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={plan.disk}
+                            onChange={(e) => handlePlanChange(idx, 'disk', e.target.value)}
+                            placeholder="40 GB NVMe"
+                            className="w-1/2 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
+                          />
+                          <input
+                            type="text"
+                            value={plan.bandwidth || ''}
+                            onChange={(e) => handlePlanChange(idx, 'bandwidth', e.target.value)}
+                            placeholder="3 TB Bandwidth"
+                            className="w-1/2 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Second Row: Badge, Button Text, Custom Deploy URL, Highlight & Delete */}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center pt-2 border-t border-white/[0.04]">
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Badge / Tag</label>
+                        <input
+                          type="text"
+                          value={plan.badge || ''}
+                          onChange={(e) => handlePlanChange(idx, 'badge', e.target.value)}
+                          placeholder="e.g. Popular, Best Value, Free"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Deploy Button Text</label>
+                        <input
+                          type="text"
+                          value={plan.buttonText || ''}
+                          onChange={(e) => handlePlanChange(idx, 'buttonText', e.target.value)}
+                          placeholder="Deploy VPS / Order Now"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-4">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center justify-between">
+                          <span>Deploy Button URL</span>
+                          <span className="text-[9px] text-slate-500 font-normal">Blank = Panel Link</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={plan.buttonUrl || ''}
+                          onChange={(e) => handlePlanChange(idx, 'buttonUrl', e.target.value)}
+                          placeholder="https://billing.example.com/cart or blank"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 flex items-center justify-end gap-3 pt-2 sm:pt-4">
+                        <label className="flex items-center gap-1.5 text-xs text-amber-300 font-semibold cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!plan.isPopular}
+                            onChange={(e) => handlePlanChange(idx, 'isPopular', e.target.checked)}
+                            className="w-4 h-4 rounded text-amber-500"
+                          />
+                          <span>Highlight</span>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePlan(idx)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                          title="Delete this plan"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Injected Custom CSS */}
