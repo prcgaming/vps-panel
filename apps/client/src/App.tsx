@@ -39,6 +39,19 @@ export const App: React.FC = () => {
   const [showCreateVps, setShowCreateVps] = useState(false);
   const [showAddNode, setShowAddNode] = useState(false);
 
+  // Custom Wallpaper State
+  const [panelBgImage, setPanelBgImage] = useState('');
+  const [panelBgOpacity, setPanelBgOpacity] = useState('0.85');
+
+  useEffect(() => {
+    api.getSettings().then((res: any) => {
+      if (res.settings) {
+        if (res.settings.panel_bg_image) setPanelBgImage(res.settings.panel_bg_image);
+        if (res.settings.panel_bg_overlay_opacity) setPanelBgOpacity(res.settings.panel_bg_overlay_opacity);
+      }
+    }).catch(() => {});
+  }, []);
+
   // Sync URL based on auth status and viewMode
   useEffect(() => {
     if (isLoading) return;
@@ -125,7 +138,15 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className={`flex h-screen ${currentTheme.bodyBg} text-slate-100 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] transition-colors duration-200`}>
+    <div 
+      className={`flex h-screen ${currentTheme.bodyBg} text-slate-100 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] transition-colors duration-200`}
+      style={panelBgImage ? {
+        backgroundImage: `linear-gradient(rgba(7, 10, 18, ${panelBgOpacity}), rgba(7, 10, 18, ${panelBgOpacity})), url('${panelBgImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      } : {}}
+    >
       {/* Sidebar Navigation */}
       <Sidebar 
         currentTab={currentTab} 

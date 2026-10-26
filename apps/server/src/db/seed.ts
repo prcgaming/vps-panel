@@ -303,8 +303,15 @@ export function seedDatabase() {
   }
 
   // 5. Seed System Settings & Branding with Theme Presets
+  const defaultPlans = [
+    { id: 'plan-micro', name: 'Cloud Micro', price: '$0.00 / Free Tier', badge: 'Free Tier', cpu: 1, ram: '1 GB RAM', disk: '20 GB NVMe', bandwidth: '1 TB Bandwidth', buttonText: 'Deploy Free VPS', isPopular: false },
+    { id: 'plan-starter', name: 'Cloud Starter', price: '$3.99 / mo', badge: 'Most Popular', cpu: 2, ram: '2 GB RAM', disk: '40 GB NVMe', bandwidth: '3 TB Bandwidth', buttonText: 'Deploy Cloud VPS', isPopular: true },
+    { id: 'plan-pro', name: 'Cloud Power Pro', price: '$7.99 / mo', badge: 'High Performance', cpu: 4, ram: '4 GB RAM', disk: '80 GB NVMe', bandwidth: '5 TB Bandwidth', buttonText: 'Deploy Power Pro', isPopular: false },
+    { id: 'plan-enterprise', name: 'Cloud Dedicated HVM', price: '$14.99 / mo', badge: 'Dedicated KVM', cpu: 8, ram: '8 GB RAM', disk: '160 GB NVMe', bandwidth: '10 TB Bandwidth', buttonText: 'Deploy Enterprise', isPopular: false }
+  ];
+
   const defaultSettings: Record<string, string> = {
-    panel_name: process.env.PANEL_NAME || 'Lunar VPS Panel',
+    panel_name: process.env.PANEL_NAME || 'Lunar Client Cloud',
     company_name: process.env.COMPANY_NAME || 'Lunar Cloud Infrastructure',
     support_url: process.env.SUPPORT_URL || 'https://vps.lunars.indevs.in',
     primary_color: process.env.PRIMARY_COLOR || '#06b6d4',
@@ -314,8 +321,29 @@ export function seedDatabase() {
     allow_registration: '1',
     allow_user_create_vps: '1',
     allow_user_manage_power: '1',
-    max_vps_per_user: '5',
-    panel_logo_url: ''
+    max_vps_per_user: '2',
+    panel_logo_url: '',
+    // Custom Backgrounds
+    panel_bg_image: '',
+    panel_bg_overlay_opacity: '0.85',
+    login_bg_image: '',
+    login_bg_overlay_opacity: '0.80',
+    web_bg_image: '',
+    web_bg_overlay_opacity: '0.85',
+    // Client Free Tier Quota Limits
+    client_free_tier_enabled: '1',
+    free_tier_max_cpu: '1',
+    free_tier_max_ram_mb: '1024',
+    free_tier_max_disk_gb: '20',
+    free_tier_allowed_os: 'all',
+    // Public Website Customizer
+    web_hero_badge: 'Enterprise Dedicated HVM Virtualization',
+    web_hero_title: 'Next-Generation High-Performance Cloud VPS',
+    web_hero_subtitle: 'Deploy dedicated KVM Hardware Virtual Machines & high-density LXC containers with raw NVMe storage and instant setup.',
+    web_discord_url: 'https://discord.gg/',
+    web_telegram_url: 'https://t.me/',
+    web_plans_json: JSON.stringify(defaultPlans),
+    web_custom_css: ''
   };
 
   for (const [key, val] of Object.entries(defaultSettings)) {

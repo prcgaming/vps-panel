@@ -75,12 +75,53 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
+    const freeTierEnabled = db.prepare("SELECT value FROM system_settings WHERE key = 'client_free_tier_enabled'").get() as { value: string } | undefined;
+    if (freeTierEnabled && (freeTierEnabled.value === '0' || freeTierEnabled.value === 'false')) {
+      res.status(403).json({ error: 'Client self-service free VPS generation is currently disabled by administrator.' });
+      return;
+    }
+
     const maxLimitRow = db.prepare("SELECT value FROM system_settings WHERE key = 'max_vps_per_user'").get() as { value: string } | undefined;
     const maxLimit = maxLimitRow ? parseInt(maxLimitRow.value, 10) : 2;
     const userVpsCount = (db.prepare('SELECT COUNT(*) as c FROM vps_instances WHERE user_id = ?').get(user.id) as { c: number }).c;
     if (userVpsCount >= maxLimit) {
-      res.status(403).json({ error: `You have reached your limit of ${maxLimit} VPS instance(s). Please contact an administrator to increase your quota.` });
+      res.status(403).json({ error: `You have reached your limit of ${maxLimit} free VPS instance(s). Please contact an administrator to increase your quota.` });
       return;
+    }
+
+    // Hardware Limit Enforcements
+    const maxCpuRow = db.prepare("SELECT value FROM system_settings WHERE key = 'free_tier_max_cpu'").get() as { value: string } | undefined;
+    const maxCpu = maxCpuRow ? parseInt(maxCpuRow.value, 10) : 1;
+    if (cpu_cores > maxCpu) {
+      res.status(400).json({ error: `Selected ${cpu_cores} vCPU exceeds the client free quota limit of ${maxCpu} vCPU.` });
+      return;
+    }
+
+    const maxRamRow = db.prepare("SELECT value FROM system_settings WHERE key = 'free_tier_max_ram_mb'").get() as { value: string } | undefined;
+    const maxRam = maxRamRow ? parseInt(maxRamRow.value, 10) : 1024;
+    if (ram_mb > maxRam) {
+      res.status(400).json({ error: `Selected ${ram_mb} MB RAM exceeds the client free quota limit of ${maxRam} MB RAM.` });
+      return;
+    }
+
+    const maxDiskRow = db.prepare("SELECT value FROM system_settings WHERE key = 'free_tier_max_disk_gb'").get() as { value: string } | undefined;
+    const maxDisk = maxDiskRow ? parseInt(maxDiskRow.value, 10) : 20;
+    if (disk_gb > maxDisk) {
+      res.status(400).json({ error: `Selected ${disk_gb} GB Disk exceeds the client free quota limit of ${maxDisk} GB Disk.` });
+      return;
+    }
+
+    // Allowed OS images check
+    const allowedOsRow = db.prepare("SELECT value FROM system_settings WHERE key = 'free_tier_allowed_os'").get() as { value: string } | undefined;
+    const allowedOs = allowedOsRow ? allowedOsRow.value : 'all';
+    if (allowedOs && allowedOs !== 'all') {
+      const allowedList = allowedOs.split(',').map(s => s.trim().toLowerCase());
+      const imgLower = os_image.toLowerCase();
+      const isAllowed = allowedList.some(allowed => imgLower.includes(allowed));
+      if (!isAllowed) {
+        res.status(400).json({ error: `Operating system "${os_image}" is not available on the free tier. Allowed: ${allowedOs}` });
+        return;
+      }
     }
   }
 

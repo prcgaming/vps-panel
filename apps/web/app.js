@@ -7,7 +7,7 @@
     supportUrl: 'https://vps.lunars.indevs.in'
   };
 
-    async function loadConfig() {
+  async function loadConfig() {
     try {
       const res = await fetch('config.json');
       if (res.ok) {
@@ -28,7 +28,121 @@
     }
 
     applyConfigToDOM();
+
+    // Fetch live system settings & custom website branding from panel
+    await fetchLiveSettings();
+
     fetchClusterTelemetry();
+  }
+
+  async function fetchLiveSettings() {
+    const panelUrl = config.panelUrl.replace(/\/$/, '');
+    try {
+      const res = await fetch(`${panelUrl}/api/settings`, { mode: 'cors' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const s = data.settings || {};
+
+      // 1. Custom Background Wallpaper
+      if (s.web_bg_image) {
+        const opacity = s.web_bg_overlay_opacity || '0.85';
+        document.body.style.backgroundImage = `linear-gradient(rgba(7, 10, 20, ${opacity}), rgba(7, 10, 20, ${opacity})), url('${s.web_bg_image}')`;
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundAttachment = 'fixed';
+        document.body.style.backgroundPosition = 'center';
+      }
+
+      // 2. Custom Brand Names
+      if (s.company_name) {
+        document.querySelectorAll('.company-name').forEach(el => el.textContent = s.company_name);
+      }
+      if (s.panel_name) {
+        document.querySelectorAll('.brand-name').forEach(el => el.textContent = s.panel_name);
+      }
+      if (s.support_url) {
+        config.supportUrl = s.support_url;
+        document.querySelectorAll('.link-support').forEach(el => el.href = s.support_url);
+      }
+
+      // 3. Custom Hero Text
+      if (s.web_hero_badge) {
+        const pillText = document.getElementById('hero-pill-text');
+        if (pillText) pillText.textContent = s.web_hero_badge;
+      }
+      if (s.web_hero_title) {
+        const titleBox = document.getElementById('hero-title-box');
+        if (titleBox) titleBox.innerHTML = s.web_hero_title;
+      }
+      if (s.web_hero_subtitle) {
+        const subtitleBox = document.getElementById('hero-subtitle-box');
+        if (subtitleBox) subtitleBox.textContent = s.web_hero_subtitle;
+      }
+
+      // 4. Custom Social Links
+      if (s.web_discord_url) {
+        document.querySelectorAll('.link-discord').forEach(el => el.href = s.web_discord_url);
+      }
+      if (s.web_telegram_url) {
+        document.querySelectorAll('.link-telegram').forEach(el => el.href = s.web_telegram_url);
+      }
+
+      // 5. Injected Custom CSS
+      if (s.web_custom_css) {
+        let styleTag = document.getElementById('custom-web-injected-css');
+        if (!styleTag) {
+          styleTag = document.createElement('style');
+          styleTag.id = 'custom-web-injected-css';
+          document.head.appendChild(styleTag);
+        }
+        styleTag.textContent = s.web_custom_css;
+      }
+
+      // 6. Dynamic Pricing Plans
+      if (s.web_plans_json) {
+        try {
+          const plans = JSON.parse(s.web_plans_json);
+          if (Array.isArray(plans) && plans.length > 0) {
+            renderCustomPlans(plans, panelUrl);
+          }
+        } catch (e) {
+          console.error('Failed to parse custom plans JSON', e);
+        }
+      }
+    } catch (err) {
+      console.log('Using default local website assets (panel settings offline or cors pending)');
+    }
+  }
+
+  function renderCustomPlans(plans, panelUrl) {
+    const container = document.getElementById('pricing-grid-container');
+    if (!container) return;
+
+    let html = '';
+    for (const p of plans) {
+      const isPop = p.isPopular;
+      html += `
+        <div class="price-card glass ${isPop ? 'popular' : ''}">
+          ${p.badge ? `<div class="popular-badge">${p.badge}</div>` : ''}
+          <div class="plan-title">${p.name}</div>
+          <div class="plan-desc">${p.desc || 'High-performance cloud virtual machine with dedicated resources.'}</div>
+          <div class="plan-price">
+            <span class="amount">${p.price}</span>
+          </div>
+          <ul class="specs-list">
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> ${p.cpu} vCPU Core${p.cpu > 1 ? 's' : ''}</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> ${p.ram}</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> ${p.disk}</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> ${p.bandwidth || 'Unmetered 1Gbps Bandwidth'}</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 1 Dedicated Public IPv4</li>
+            <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Full KVM / QEMU Virtualization</li>
+          </ul>
+          <a href="${panelUrl}" target="_blank" class="${isPop ? 'btn-primary' : 'btn-secondary'} link-panel-deploy">
+            ${p.buttonText || 'Deploy VPS'}
+          </a>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
   }
 
   function applyConfigToDOM() {

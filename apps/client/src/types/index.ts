@@ -152,6 +152,33 @@ export interface SystemSettings {
   primary_color?: string;
   default_driver?: string;
   welcome_message?: string;
+  allow_registration?: string;
+  allow_user_create_vps?: string;
+  allow_user_manage_power?: string;
+  max_vps_per_user?: string;
+  panel_logo_url?: string;
+  // Background Wallpapers
+  panel_bg_image?: string;
+  panel_bg_overlay_opacity?: string;
+  login_bg_image?: string;
+  login_bg_overlay_opacity?: string;
+  web_bg_image?: string;
+  web_bg_overlay_opacity?: string;
+  // Free VPS Tier & Client Quota
+  client_free_tier_enabled?: string;
+  free_tier_max_cpu?: string;
+  free_tier_max_ram_mb?: string;
+  free_tier_max_disk_gb?: string;
+  free_tier_allowed_os?: string;
+  // Website Customizer
+  web_hero_badge?: string;
+  web_hero_title?: string;
+  web_hero_subtitle?: string;
+  web_discord_url?: string;
+  web_telegram_url?: string;
+  web_plans_json?: string;
+  web_faqs_json?: string;
+  web_custom_css?: string;
   [key: string]: string | undefined;
 }
 

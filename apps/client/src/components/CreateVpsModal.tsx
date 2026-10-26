@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Cpu, HardDrive, Shield, Server, Check, Layers, Sparkles, Monitor, Disc, Terminal, AlertCircle } from 'lucide-react';
+import { X, Cpu, HardDrive, Shield, Server, Check, Layers, Sparkles, Monitor, Disc, Terminal, AlertCircle, Gem } from 'lucide-react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Node, OsTemplate } from '../types';
 
@@ -10,11 +11,27 @@ interface CreateVpsModalProps {
 }
 
 export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreated }) => {
+  const { user } = useAuth();
   const { currentTheme } = useTheme();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [templates, setTemplates] = useState<OsTemplate[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Free Tier Limits State
+  const [freeLimits, setFreeLimits] = useState<{
+    enabled: boolean;
+    maxCpu: number;
+    maxRam: number;
+    maxDisk: number;
+    allowedOs: string;
+  }>({
+    enabled: true,
+    maxCpu: 1,
+    maxRam: 1024,
+    maxDisk: 20,
+    allowedOs: 'all'
+  });
 
   // Form state
   const [name, setName] = useState('');
@@ -34,8 +51,8 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
   const [sshKey, setSshKey] = useState('');
 
   useEffect(() => {
-    Promise.all([api.getNodes(), api.getTemplates()])
-      .then(([nodesRes, tmplRes]) => {
+    Promise.all([api.getNodes(), api.getTemplates(), api.getSettings().catch(() => ({}))])
+      .then(([nodesRes, tmplRes, settingsRes]) => {
         setNodes(nodesRes.nodes || []);
         const tmpls: OsTemplate[] = tmplRes.templates || [];
         setTemplates(tmpls);
@@ -43,6 +60,17 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
           const defaultTmpl = tmpls.find(t => t.image_ref === 'ubuntu:24.04') || tmpls[0];
           setSelectedTemplate(defaultTmpl);
           setOsImage(defaultTmpl.image_ref);
+        }
+
+        if (settingsRes?.settings) {
+          const s = settingsRes.settings;
+          setFreeLimits({
+            enabled: s.client_free_tier_enabled !== '0' && s.client_free_tier_enabled !== 'false',
+            maxCpu: parseInt(s.free_tier_max_cpu || '1', 10),
+            maxRam: parseInt(s.free_tier_max_ram_mb || '1024', 10),
+            maxDisk: parseInt(s.free_tier_max_disk_gb || '20', 10),
+            allowedOs: s.free_tier_allowed_os || 'all'
+          });
         }
       })
       .catch(console.error)
@@ -102,6 +130,25 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
       return alert('Please enter a direct HTTP/HTTPS ISO download URL for the custom ISO boot.');
     }
 
+    if (user?.role !== 'admin') {
+      if (!freeLimits.enabled) {
+        alert('Client self-service VPS deployment is currently disabled by administrator.');
+        return;
+      }
+      if (cpuCores > freeLimits.maxCpu) {
+        alert(`Selected ${cpuCores} vCPU exceeds your free tier limit of ${freeLimits.maxCpu} vCPU.`);
+        return;
+      }
+      if (ramMb > freeLimits.maxRam) {
+        alert(`Selected ${ramMb} MB RAM exceeds your free tier limit of ${freeLimits.maxRam} MB RAM.`);
+        return;
+      }
+      if (diskGb > freeLimits.maxDisk) {
+        alert(`Selected ${diskGb} GB Disk exceeds your free tier limit of ${freeLimits.maxDisk} GB Disk.`);
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       await api.createVps({
@@ -151,6 +198,28 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
           
+          {/* Client Free Tier Banner */}
+          {user?.role !== 'admin' && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-blue-950/40 to-slate-900 border border-cyan-500/30 flex items-center justify-between shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  <Gem className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Client Free Tier Allocation</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40">
+                      Active
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Your account can provision up to: <strong className="text-cyan-300">{freeLimits.maxCpu} vCPU</strong> &bull; <strong className="text-cyan-300">{freeLimits.maxRam >= 1024 ? `${freeLimits.maxRam / 1024} GB` : `${freeLimits.maxRam} MB`} RAM</strong> &bull; <strong className="text-cyan-300">{freeLimits.maxDisk} GB NVMe</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Step 1: Virtualization Engine */}
           <div>
             <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3 flex items-center gap-2">

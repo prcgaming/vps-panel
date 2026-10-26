@@ -13,11 +13,13 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [panelName, setPanelName] = useState('Lunar VPS Panel');
+  const [panelName, setPanelName] = useState('Lunar Client Cloud');
   const [allowRegistration, setAllowRegistration] = useState(true);
+  const [loginBgImage, setLoginBgImage] = useState('');
+  const [loginBgOpacity, setLoginBgOpacity] = useState('0.80');
 
   useEffect(() => {
-    // Fetch public panel settings for branding & registration status
+    // Fetch public panel settings for branding, custom wallpaper & registration status
     api.getSettings()
       .then((res: any) => {
         if (res.settings) {
@@ -25,6 +27,8 @@ export const Login: React.FC = () => {
           if (res.settings.allow_registration !== undefined) {
             setAllowRegistration(res.settings.allow_registration === '1' || res.settings.allow_registration === 'true');
           }
+          if (res.settings.login_bg_image) setLoginBgImage(res.settings.login_bg_image);
+          if (res.settings.login_bg_overlay_opacity) setLoginBgOpacity(res.settings.login_bg_overlay_opacity);
         }
       })
       .catch(() => {});
@@ -51,7 +55,15 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070a12] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+    <div 
+      className="min-h-screen bg-[#070a12] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]"
+      style={loginBgImage ? {
+        backgroundImage: `linear-gradient(rgba(7, 10, 18, ${loginBgOpacity}), rgba(7, 10, 18, ${loginBgOpacity})), url('${loginBgImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      } : {}}
+    >
       {/* Dynamic Background Neon Gradients & Glows based on Theme */}
       <div 
         className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-[130px] pointer-events-none opacity-40 transition-colors duration-700"
