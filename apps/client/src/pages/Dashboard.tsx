@@ -8,9 +8,10 @@ import {
   Terminal as TermIcon, 
   ArrowUpRight, 
   Power, 
-  RotateCcw,
-  CheckCircle2,
-  AlertCircle
+  RotateCcw, 
+  CheckCircle2, 
+  AlertCircle,
+  Sliders
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useTheme } from '../context/ThemeContext';
@@ -18,11 +19,12 @@ import { ClusterStats, VpsInstance, Node } from '../types';
 
 interface DashboardProps {
   onOpenConsole: (vps: VpsInstance) => void;
+  onOpenManage: (vps: VpsInstance) => void;
   onOpenCreateVps: () => void;
   onNavigateTab: (tab: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreateVps, onNavigateTab }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManage, onOpenCreateVps, onNavigateTab }) => {
   const { currentTheme } = useTheme();
   const [stats, setStats] = useState<ClusterStats | null>(null);
   const [vpsList, setVpsList] = useState<VpsInstance[]>([]);
@@ -50,19 +52,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreat
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       
       {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-100 tracking-tight">Cluster Overview</h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Real-time status of your worker nodes, virtual servers, and distributed hardware allocation
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900/90 via-[#0e1424]/90 to-slate-900/90 border border-white/[0.08] p-6 rounded-3xl shadow-xl backdrop-blur-xl relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold tracking-widest uppercase text-cyan-400 bg-cyan-500/10 border border-cyan-500/25 px-2.5 py-0.5 rounded-full">
+              Enterprise Client Console
+            </span>
+            <span className="text-xs text-slate-400 font-mono">Tier: High-Availability</span>
+          </div>
+          <h2 className="text-2xl font-black text-white tracking-tight">Cloud Infrastructure Overview</h2>
+          <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+            Real-time telemetry, dedicated HVM hardware virtualization, memory allocation, and client virtual private servers.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative z-10 self-start md:self-auto">
           <button
             onClick={onOpenCreateVps}
-            className={`px-4 py-2 ${currentTheme.btnPrimary} text-white text-xs font-semibold rounded-xl transition`}
+            className={`px-5 py-2.5 ${currentTheme.btnPrimary} text-white text-xs font-bold rounded-xl transition shadow-lg hover:shadow-cyan-500/25 flex items-center gap-2`}
           >
-            Deploy New VPS
+            <span>+ Deploy Cloud VPS</span>
           </button>
         </div>
       </div>
@@ -73,78 +81,78 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreat
         {/* Nodes Card */}
         <div 
           onClick={() => onNavigateTab('nodes')}
-          className="p-5 bg-[#0e1424] border border-slate-800 hover:border-slate-700 rounded-2xl cursor-pointer transition group shadow-sm"
+          className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] hover:border-cyan-500/40 rounded-2xl cursor-pointer transition-all duration-300 group shadow-lg hover:-translate-y-0.5 backdrop-blur-xl"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cluster Nodes</span>
-            <div className="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl group-hover:scale-110 transition">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compute Nodes</span>
+            <div className="p-2.5 bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 rounded-xl group-hover:scale-110 transition shadow-sm">
               <Server className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-100">{stats?.nodes.total || 0}</span>
-            <span className="text-xs text-emerald-400 font-medium">({stats?.nodes.online || 0} online)</span>
+            <span className="text-3xl font-black text-white tracking-tight">{stats?.nodes.total || 0}</span>
+            <span className="text-xs text-emerald-400 font-semibold">({stats?.nodes.online || 0} active)</span>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Active virtualization worker nodes</p>
+          <p className="text-xs text-slate-400 mt-2">Distributed hypervisor cores</p>
         </div>
 
         {/* VPS Instances Card */}
         <div 
           onClick={() => onNavigateTab('vps')}
-          className="p-5 bg-[#0e1424] border border-slate-800 hover:border-slate-700 rounded-2xl cursor-pointer transition group shadow-sm"
+          className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] hover:border-blue-500/40 rounded-2xl cursor-pointer transition-all duration-300 group shadow-lg hover:-translate-y-0.5 backdrop-blur-xl"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Virtual Servers</span>
-            <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl group-hover:scale-110 transition">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Virtual Servers</span>
+            <div className="p-2.5 bg-blue-500/15 border border-blue-500/30 text-blue-400 rounded-xl group-hover:scale-110 transition shadow-sm">
               <Layers className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-100">{stats?.vps.total || 0}</span>
-            <span className="text-xs text-emerald-400 font-medium">({stats?.vps.running || 0} running)</span>
+            <span className="text-3xl font-black text-white tracking-tight">{stats?.vps.total || 0}</span>
+            <span className="text-xs text-emerald-400 font-semibold">({stats?.vps.running || 0} running)</span>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Provisioned VPS instances</p>
+          <p className="text-xs text-slate-400 mt-2">Active client instances</p>
         </div>
 
         {/* Allocated RAM */}
-        <div className="p-5 bg-[#0e1424] border border-slate-800 rounded-2xl shadow-sm">
+        <div className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] rounded-2xl shadow-lg backdrop-blur-xl">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Memory Allocation</span>
-            <div className="p-2 bg-purple-500/10 text-purple-400 rounded-xl">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Memory Allocation</span>
+            <div className="p-2.5 bg-purple-500/15 border border-purple-500/30 text-purple-400 rounded-xl shadow-sm">
               <Activity className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-100">
+            <span className="text-3xl font-black text-white tracking-tight">
               {stats?.resources.ram.allocatedMb ? `${(stats.resources.ram.allocatedMb / 1024).toFixed(1)} GB` : '0 GB'}
             </span>
-            <span className="text-xs text-slate-400">/ {(stats?.resources.ram.totalMb || 0) / 1024} GB</span>
+            <span className="text-xs text-slate-400 font-mono">/ {(stats?.resources.ram.totalMb || 0) / 1024} GB</span>
           </div>
-          <div className="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+          <div className="w-full bg-slate-800/80 h-2 rounded-full mt-3 overflow-hidden ring-1 ring-white/[0.05]">
             <div 
-              className="bg-purple-500 h-full rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-sm"
               style={{ width: `${stats?.resources.ram.percent || 0}%` }}
             />
           </div>
         </div>
 
         {/* Allocated Cores */}
-        <div className="p-5 bg-[#0e1424] border border-slate-800 rounded-2xl shadow-sm">
+        <div className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] rounded-2xl shadow-lg backdrop-blur-xl">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">vCPU Allocation</span>
-            <div className="p-2 bg-amber-500/10 text-amber-400 rounded-xl">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">vCPU Allocation</span>
+            <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-xl shadow-sm">
               <Cpu className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-100">
+            <span className="text-3xl font-black text-white tracking-tight">
               {stats?.resources.cpu.allocated || 0}
             </span>
-            <span className="text-xs text-slate-400">/ {stats?.resources.cpu.total || 0} vCPUs</span>
+            <span className="text-xs text-slate-400 font-mono">/ {stats?.resources.cpu.total || 0} vCPUs</span>
           </div>
-          <div className="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+          <div className="w-full bg-slate-800/80 h-2 rounded-full mt-3 overflow-hidden ring-1 ring-white/[0.05]">
             <div 
-              className="bg-amber-500 h-full rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-amber-500 to-yellow-500 h-full rounded-full transition-all duration-500 shadow-sm"
               style={{ width: `${stats?.resources.cpu.percent || 0}%` }}
             />
           </div>
@@ -246,7 +254,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreat
                     <tr key={vps.id} className="hover:bg-slate-800/40 transition">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-200">{vps.name}</span>
+                          <button
+                            onClick={() => onOpenManage(vps)}
+                            className="font-semibold text-slate-200 hover:text-cyan-300 hover:underline transition text-left"
+                            title="Open Server Manager"
+                          >
+                            {vps.name}
+                          </button>
                           {vps.virt_type === 'container' ? (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
                               Container
@@ -280,13 +294,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenCreat
                         <div className="font-mono text-slate-500">{vps.cpu_cores} vCPU / {vps.ram_mb}MB / {vps.disk_gb}GB</div>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={() => onOpenConsole(vps)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-cyan-500/10 hover:text-cyan-300 hover:border-cyan-500/30 text-slate-300 text-xs font-medium rounded-lg border border-slate-700 transition"
-                        >
-                          <TermIcon className="w-3.5 h-3.5" />
-                          <span>Console</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => onOpenManage(vps)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:border-cyan-500/30 text-xs font-bold rounded-lg border border-cyan-500/20 transition"
+                            title="Open Server Manager (Files, SSH, Console, Reinstall)"
+                          >
+                            <Sliders className="w-3.5 h-3.5" />
+                            <span>Manage</span>
+                          </button>
+                          <button
+                            onClick={() => onOpenConsole(vps)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-cyan-500/10 hover:text-cyan-300 hover:border-cyan-500/30 text-slate-300 text-xs font-medium rounded-lg border border-slate-700 transition"
+                          >
+                            <TermIcon className="w-3.5 h-3.5" />
+                            <span>Console</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

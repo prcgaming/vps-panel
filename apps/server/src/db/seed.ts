@@ -272,7 +272,7 @@ export function seedDatabase() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       'node-local-master',
-      `Master-Node (${hostName})`,
+      `Cloud-Node-01 (${hostName})`,
       hostName,
       serverPublicIp,
       4001,
@@ -295,11 +295,11 @@ export function seedDatabase() {
       'cluster_initialized',
       'cluster',
       'cluster-root',
-      `Cluster initialized with real Local Node (${hostName}, ${hostCpuCount} vCPU, ${hostRamTotalMb}MB RAM)`,
+      `Client Cloud initialized with Primary Compute Node (${hostName}, ${hostCpuCount} vCPU, ${hostRamTotalMb}MB RAM)`,
       '127.0.0.1'
     );
 
-    console.log(`[Seed] Real Local Node registered: Master-Node (${hostName}) [${hostCpuCount} Cores, ${hostRamTotalMb}MB RAM]`);
+    console.log(`[Seed] Real Primary Node registered: Cloud-Node-01 (${hostName}) [${hostCpuCount} Cores, ${hostRamTotalMb}MB RAM]`);
   }
 
   // 5. Seed System Settings & Branding with Theme Presets

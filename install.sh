@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # ==============================================================================
 # VPS PANEL - Universal Control & Management Utility (CLI & Installer)
 # GitHub: https://github.com/prcgaming/vps-panel
@@ -473,7 +473,7 @@ VHOSTEOF
   start_or_reload_nginx
   echo -e "\n${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}"
   echo -e "${GREEN}${BOLD}*  PUBLIC HOSTING WEBSITE LIVE AT: https://${WEB_DOMAIN}${NC}"
-  echo -e "${GREEN}${BOLD}*  LINKED MASTER CONTROL PANEL:    ${LINKED_PANEL_URL}${NC}"
+  echo -e "${GREEN}${BOLD}*  LINKED CLIENT CLOUD PANEL:      ${LINKED_PANEL_URL}${NC}"
   echo -e "${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}\n"
 }
 
@@ -491,7 +491,7 @@ install_web_portal() {
 
   if [ -z "$LINKED_PANEL_URL" ]; then
     local default_panel_url="https://vps.${WEB_DOMAIN}"
-    read -r -p "Enter Linked Master Panel URL [$default_panel_url]: " PANEL_URL_INPUT
+    read -r -p "Enter Linked Client Panel URL [$default_panel_url]: " PANEL_URL_INPUT
     LINKED_PANEL_URL="${PANEL_URL_INPUT:-$default_panel_url}"
   fi
 
@@ -681,8 +681,8 @@ install_panel() {
   local local_public_ip=$(get_public_ip)
 
   # Interactive Setup Wizard
-  echo -e "${CYAN}${BOLD}[+] VPS Panel All-In-One Setup Wizard (Master Panel + Built-in Local HVM Node):${NC}"
-  echo -e "${NC}This server will run both your Master Panel AND your primary hypervisor to create VPS.${NC}"
+  echo -e "${CYAN}${BOLD}[+] VPS Client Cloud Panel All-In-One Setup Wizard (Panel + Built-in Local HVM Node):${NC}"
+  echo -e "${NC}This server will run both your Client Cloud Panel AND your primary hypervisor to create VPS.${NC}"
   echo -e "${GREEN}All-in-one installation: No external worker node or join token is needed!${NC}\n"
 
   # 1. Domain Configuration
@@ -1021,11 +1021,11 @@ AGENTINITEOF
   install_cli_binary
 
   echo -e "\n${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}"
-  echo -e "${GREEN}${BOLD}*  VPS PANEL INSTALLED SUCCESSFULLY! (100% REAL & OPERATIONAL)              *${NC}"
+  echo -e "${GREEN}${BOLD}*  VPS CLIENT CLOUD PANEL INSTALLED SUCCESSFULLY! (100% REAL & OPERATIONAL)  *${NC}"
   echo -e "${GREEN}${BOLD}* ------------------------------------------------------------------------- *${NC}"
-  echo -e "  ${CYAN}Master Panel URL:${NC}    ${BOLD}${FINAL_URL}${NC}"
+  echo -e "  ${CYAN}Client Panel URL:${NC}    ${BOLD}${FINAL_URL}${NC}"
   if [ -n "$WEB_FINAL_URL" ]; then
-    echo -e "  ${CYAN}Public Website URL:${NC}  ${BOLD}${WEB_FINAL_URL}${NC} (Linked to Master Panel)"
+    echo -e "  ${CYAN}Public Website URL:${NC}  ${BOLD}${WEB_FINAL_URL}${NC} (Linked to Client Panel)"
   fi
   if [ -z "$PANEL_DOMAIN" ]; then
     echo -e "  ${YELLOW}Mode:${NC}                ${BOLD}Direct IP / Codespaces / CodeSandbox${NC}"

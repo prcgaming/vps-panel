@@ -50,12 +50,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  const quickLogin = (demoEmail: string, demoPass: string) => {
-    setIsRegister(false);
-    setEmail(demoEmail);
-    setPassword(demoPass);
-  };
-
   return (
     <div className="min-h-screen bg-[#070a12] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Dynamic Background Neon Gradients & Glows based on Theme */}
@@ -87,39 +81,39 @@ export const Login: React.FC = () => {
           <h2 className="text-2xl font-black text-white tracking-tight flex items-center justify-center gap-2">
             {panelName}
             <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full ${currentTheme.bgBadge} font-bold`}>
-              Cloud
+              Client Console
             </span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">Multi-Node Virtualization & Cloud Control Center</p>
+          <p className="text-xs text-slate-400 mt-1">Client Cloud Management & Virtualization Portal</p>
         </div>
 
         {/* Card */}
-        <div className="bg-[#0e1424]/90 border border-slate-800/90 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
+        <div className="bg-[#0b101d]/95 border border-white/[0.08] rounded-3xl p-8 shadow-2xl backdrop-blur-2xl ring-1 ring-white/[0.05]">
           
           {/* Tab Switcher: Sign In vs Sign Up */}
-          <div className="flex bg-slate-900/90 p-1 rounded-xl mb-6 border border-slate-800/80">
+          <div className="flex bg-slate-900/90 p-1 rounded-2xl mb-6 border border-white/[0.06]">
             <button
               type="button"
               onClick={() => { setIsRegister(false); setError(''); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
                 !isRegister 
                   ? `${currentTheme.btnPrimary}` 
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Sign In
+              Client Login
             </button>
             <button
               type="button"
               onClick={() => {
                 if (!allowRegistration) {
-                  setError('Public registration is currently disabled by the administrator.');
+                  setError('New client registration is currently restricted by the administrator.');
                   return;
                 }
                 setIsRegister(true);
                 setError('');
               }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
                 isRegister 
                   ? `${currentTheme.btnPrimary}` 
                   : 'text-slate-400 hover:text-slate-200'
@@ -194,37 +188,12 @@ export const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full mt-2 py-3 ${currentTheme.btnPrimary} font-semibold rounded-xl transition flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer`}
+              className={`w-full mt-2 py-3 ${currentTheme.btnPrimary} font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer shadow-lg`}
             >
-              <span>{loading ? (isRegister ? 'Creating Account...' : 'Authenticating...') : (isRegister ? 'Register & Get Started' : 'Sign In to Panel')}</span>
+              <span>{loading ? (isRegister ? 'Creating Client Account...' : 'Authenticating...') : (isRegister ? 'Create Client Account' : 'Sign In to Client Console')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Quick Demo Access (Sign In only) */}
-          {!isRegister && (
-            <div className="mt-6 pt-5 border-t border-slate-800">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5 text-center">
-                Quick Demo Access
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => quickLogin('admin@vpspanel.local', 'admin123')}
-                  className="px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300 font-medium text-center transition"
-                >
-                  Super Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => quickLogin('user@vpspanel.local', 'user123')}
-                  className="px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300 font-medium text-center transition"
-                >
-                  Client User
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Security badge */}

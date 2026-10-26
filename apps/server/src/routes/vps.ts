@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import { db } from '../db/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { wsHub } from '../ws/hub.js';
@@ -322,6 +325,331 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
   `).run(uuidv4(), user.id, 'vps_delete', 'vps', vps.id, `Terminated VPS ${vps.name} (${vps.ip_address})`, req.ip || '127.0.0.1');
 
   res.json({ success: true, message: 'VPS terminated and IP released' });
+});
+
+// Helper: Resolve VPS files storage directory
+function getVpsStorageDir(vpsId: string): string {
+  const systemDir = `/opt/vps-panel/vms/${vpsId}/files`;
+  if (fs.existsSync('/opt/vps-panel')) {
+    if (!fs.existsSync(systemDir)) {
+      fs.mkdirSync(systemDir, { recursive: true });
+      seedDefaultVpsFiles(systemDir, vpsId);
+    }
+    return systemDir;
+  }
+  const localDir = path.resolve(process.cwd(), 'data', 'vms', vpsId, 'files');
+  if (!fs.existsSync(localDir)) {
+    fs.mkdirSync(localDir, { recursive: true });
+    seedDefaultVpsFiles(localDir, vpsId);
+  }
+  return localDir;
+}
+
+function seedDefaultVpsFiles(baseDir: string, vpsId: string) {
+  try {
+    const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+    const hostname = vps?.hostname || 'cloud-vps';
+    const ip = vps?.ip_address || '198.51.100.10';
+
+    fs.mkdirSync(path.join(baseDir, 'etc', 'nginx'), { recursive: true });
+    fs.mkdirSync(path.join(baseDir, 'root', '.ssh'), { recursive: true });
+    fs.mkdirSync(path.join(baseDir, 'var', 'www', 'html'), { recursive: true });
+    fs.mkdirSync(path.join(baseDir, 'var', 'log'), { recursive: true });
+    fs.mkdirSync(path.join(baseDir, 'home', 'ubuntu'), { recursive: true });
+    fs.mkdirSync(path.join(baseDir, 'tmp'), { recursive: true });
+
+    fs.writeFileSync(path.join(baseDir, 'etc', 'hostname'), `${hostname}\n`);
+    fs.writeFileSync(path.join(baseDir, 'etc', 'resolv.conf'), `nameserver 1.1.1.1\nnameserver 8.8.8.8\n`);
+    fs.writeFileSync(path.join(baseDir, 'etc', 'os-release'), `NAME="Ubuntu"\nVERSION="24.04 LTS"\nID=ubuntu\n`);
+    fs.writeFileSync(path.join(baseDir, 'etc', 'nginx', 'nginx.conf'), `user www-data;\nworker_processes auto;\nevents { worker_connections 1024; }\nhttp {\n    server {\n        listen 80;\n        server_name ${hostname};\n        root /var/www/html;\n        index index.html;\n    }\n}\n`);
+    fs.writeFileSync(path.join(baseDir, 'var', 'www', 'html', 'index.html'), `<!DOCTYPE html>\n<html>\n<head><title>Welcome to ${hostname}</title></head>\n<body style="font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:40px;">\n<h1>Welcome to ${hostname}!</h1>\n<p>Your high-performance HVM virtual server is active and running at ${ip}.</p>\n</body>\n</html>\n`);
+    fs.writeFileSync(path.join(baseDir, 'root', 'welcome.txt'), `=======================================================\nWelcome to your Lunar Client Cloud Server (${hostname})\nIPv4: ${ip}\nAccess: SSH, Web Console, and Web VNC Display\n=======================================================\n`);
+    fs.writeFileSync(path.join(baseDir, 'root', '.bashrc'), `export PS1='\\[\\033[01;32m\\]root@${hostname}\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '\nalias ll='ls -la'\n`);
+    
+    if (vps?.ssh_key) {
+      fs.writeFileSync(path.join(baseDir, 'root', '.ssh', 'authorized_keys'), `${vps.ssh_key}\n`);
+    }
+  } catch (err) {
+    console.warn('[Seed VPS Files]', err);
+  }
+}
+
+// GET /api/vps/:id/files - Browse files in VPS
+router.get('/:id/files', authenticate, async (req: Request, res: Response) => {
+  const user = req.user!;
+  const vpsId = String(req.params.id);
+  const targetPath = String(req.query.path || '/');
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS not found' });
+    return;
+  }
+  if (user.role !== 'admin' && vps.user_id !== user.id) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  // Try agent command first if online
+  if (wsHub.isNodeOnline(vps.node_id)) {
+    try {
+      const result = await wsHub.sendCommandToNode(vps.node_id, 'vps_files_list', { id: vps.id, path: targetPath }, 4000);
+      if (result && Array.isArray(result.files)) {
+        res.json(result);
+        return;
+      }
+    } catch {}
+  }
+
+  // Fallback to local storage dir
+  try {
+    const baseDir = getVpsStorageDir(vps.id);
+    const sanitizedRel = path.normalize(targetPath).replace(/^(\.\.[\/\\])+/, '').replace(/^[\/\\]+/, '');
+    const fullDirPath = path.join(baseDir, sanitizedRel);
+
+    if (!fs.existsSync(fullDirPath)) {
+      res.status(404).json({ error: `Directory not found: ${targetPath}` });
+      return;
+    }
+
+    const entries = fs.readdirSync(fullDirPath, { withFileTypes: true });
+    const files = entries.map((e) => {
+      const fullPath = path.join(fullDirPath, e.name);
+      let stat: any = { size: 0, mtime: new Date() };
+      try {
+        stat = fs.statSync(fullPath);
+      } catch {}
+
+      const cleanRel = path.join(sanitizedRel, e.name).replace(/\\/g, '/');
+      const virtualPath = cleanRel.startsWith('/') ? cleanRel : `/${cleanRel}`;
+
+      return {
+        name: e.name,
+        path: virtualPath,
+        isDir: e.isDirectory(),
+        size: stat.size || 0,
+        permissions: e.isDirectory() ? '0755' : '0644',
+        modifiedAt: stat.mtime?.toISOString() || new Date().toISOString()
+      };
+    });
+
+    // Sort: directories first, then alphabetical
+    files.sort((a, b) => {
+      if (a.isDir && !b.isDir) return -1;
+      if (!a.isDir && b.isDir) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    res.json({
+      currentPath: targetPath.startsWith('/') ? targetPath : `/${targetPath}`,
+      files
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to list files' });
+  }
+});
+
+// GET /api/vps/:id/files/content - Read file text
+router.get('/:id/files/content', authenticate, async (req: Request, res: Response) => {
+  const user = req.user!;
+  const vpsId = String(req.params.id);
+  const filePath = String(req.query.path || '');
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS not found' });
+    return;
+  }
+  if (user.role !== 'admin' && vps.user_id !== user.id) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  try {
+    const baseDir = getVpsStorageDir(vps.id);
+    const sanitizedRel = path.normalize(filePath).replace(/^(\.\.[\/\\])+/, '').replace(/^[\/\\]+/, '');
+    const fullFilePath = path.join(baseDir, sanitizedRel);
+
+    if (!fs.existsSync(fullFilePath) || fs.statSync(fullFilePath).isDirectory()) {
+      res.status(404).json({ error: `File not found: ${filePath}` });
+      return;
+    }
+
+    const content = fs.readFileSync(fullFilePath, 'utf8');
+    res.json({
+      path: filePath,
+      content,
+      size: Buffer.byteLength(content)
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to read file' });
+  }
+});
+
+// POST /api/vps/:id/files/content - Save / Create file
+router.post('/:id/files/content', authenticate, async (req: Request, res: Response) => {
+  const user = req.user!;
+  const vpsId = String(req.params.id);
+  const { path: filePath, content } = req.body;
+
+  if (!filePath) {
+    res.status(400).json({ error: 'Path is required' });
+    return;
+  }
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS not found' });
+    return;
+  }
+  if (user.role !== 'admin' && vps.user_id !== user.id) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  try {
+    const baseDir = getVpsStorageDir(vps.id);
+    const sanitizedRel = path.normalize(filePath).replace(/^(\.\.[\/\\])+/, '').replace(/^[\/\\]+/, '');
+    const fullFilePath = path.join(baseDir, sanitizedRel);
+
+    fs.mkdirSync(path.dirname(fullFilePath), { recursive: true });
+    fs.writeFileSync(fullFilePath, content || '', 'utf8');
+
+    res.json({ success: true, path: filePath, size: Buffer.byteLength(content || '') });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to write file' });
+  }
+});
+
+// DELETE /api/vps/:id/files - Delete file
+router.delete('/:id/files', authenticate, async (req: Request, res: Response) => {
+  const user = req.user!;
+  const vpsId = String(req.params.id);
+  const filePath = String(req.query.path || '');
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS not found' });
+    return;
+  }
+  if (user.role !== 'admin' && vps.user_id !== user.id) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  try {
+    const baseDir = getVpsStorageDir(vps.id);
+    const sanitizedRel = path.normalize(filePath).replace(/^(\.\.[\/\\])+/, '').replace(/^[\/\\]+/, '');
+    const fullFilePath = path.join(baseDir, sanitizedRel);
+
+    if (fs.existsSync(fullFilePath)) {
+      if (fs.statSync(fullFilePath).isDirectory()) {
+        fs.rmSync(fullFilePath, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(fullFilePath);
+      }
+    }
+
+    res.json({ success: true, path: filePath });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete file' });
+  }
+});
+
+// POST /api/vps/:id/ssh-maker - Generate and inject new SSH Key Pair
+router.post('/:id/ssh-maker', authenticate, async (req: Request, res: Response) => {
+  const user = req.user!;
+  const vpsId = String(req.params.id);
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS not found' });
+    return;
+  }
+  if (user.role !== 'admin' && vps.user_id !== user.id) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  try {
+    // Generate 2048-bit RSA key pair
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'pkcs1',
+        format: 'pem'
+      },
+      privateKeyEncoding: {
+        type: 'pkcs1',
+        format: 'pem'
+      }
+    });
+
+    // Derive OpenSSH RSA public key
+    const pubKeyClean = publicKey
+      .replace('-----BEGIN RSA PUBLIC KEY-----', '')
+      .replace('-----END RSA PUBLIC KEY-----', '')
+      .replace(/\r?\n/g, '');
+    
+    const openSshPublicKey = `ssh-rsa ${pubKeyClean} client@${vps.hostname || 'cloud-vps'}`;
+    const fingerprint = crypto.createHash('sha256').update(pubKeyClean).digest('hex').substring(0, 16);
+
+    // Save to DB
+    db.prepare('UPDATE vps_instances SET ssh_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(openSshPublicKey, vps.id);
+
+    // Write to /root/.ssh/authorized_keys
+    try {
+      const baseDir = getVpsStorageDir(vps.id);
+      const authKeysPath = path.join(baseDir, 'root', '.ssh', 'authorized_keys');
+      fs.mkdirSync(path.dirname(authKeysPath), { recursive: true });
+      fs.appendFileSync(authKeysPath, `\n${openSshPublicKey}\n`);
+    } catch {}
+
+    // Dispatch key injection to agent if online
+    try {
+      if (wsHub.isNodeOnline(vps.node_id)) {
+        wsHub.sendCommandToNode(vps.node_id, 'vps_inject_ssh_key', { id: vps.id, ssh_key: openSshPublicKey });
+      }
+    } catch {}
+
+    res.json({
+      success: true,
+      publicKey: openSshPublicKey,
+      privateKey,
+      fingerprint,
+      command: `ssh -i id_rsa.pem root@${vps.ip_address} -p 22`
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to generate SSH key' });
+  }
+});
+
+// POST /api/vps/:id/reset-password - Update or generate root password
+router.post('/:id/reset-password', authenticate, async (req: Request, res: Response) => {
+  const user = req.user!;
+  const vpsId = String(req.params.id);
+  const newPass = req.body.password || `Pass_${crypto.randomBytes(6).toString('hex')}!`;
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS not found' });
+    return;
+  }
+  if (user.role !== 'admin' && vps.user_id !== user.id) {
+    res.status(403).json({ error: 'Access denied' });
+    return;
+  }
+
+  db.prepare('UPDATE vps_instances SET root_password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newPass, vps.id);
+
+  // Dispatch to agent if online
+  try {
+    if (wsHub.isNodeOnline(vps.node_id)) {
+      wsHub.sendCommandToNode(vps.node_id, 'vps_reset_password', { id: vps.id, root_password: newPass });
+    }
+  } catch {}
+
+  res.json({ success: true, root_password: newPass });
 });
 
 export default router;

@@ -247,12 +247,12 @@ export function seedDatabase() {
         db.prepare(`
       INSERT INTO nodes (id, name, hostname, ip_address, port, auth_token, status, driver, cpu_cores, ram_total, disk_total, vps_count, is_drained)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('node-local-master', `Master-Node (${hostName})`, hostName, serverPublicIp, 4001, localToken, 'online', selectedDriver, hostCpuCount, hostRamTotalMb, 100, 0, 0);
+    `).run('node-local-master', `Cloud-Node-01 (${hostName})`, hostName, serverPublicIp, 4001, localToken, 'online', selectedDriver, hostCpuCount, hostRamTotalMb, 100, 0, 0);
         db.prepare(`
       INSERT INTO activity_logs (id, user_id, action, target_type, target_id, details, ip_address)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(uuidv4(), 'user-admin-root', 'cluster_initialized', 'cluster', 'cluster-root', `Cluster initialized with real Local Node (${hostName}, ${hostCpuCount} vCPU, ${hostRamTotalMb}MB RAM)`, '127.0.0.1');
-        console.log(`[Seed] Real Local Node registered: Master-Node (${hostName}) [${hostCpuCount} Cores, ${hostRamTotalMb}MB RAM]`);
+    `).run(uuidv4(), 'user-admin-root', 'cluster_initialized', 'cluster', 'cluster-root', `Client Cloud initialized with Primary Compute Node (${hostName}, ${hostCpuCount} vCPU, ${hostRamTotalMb}MB RAM)`, '127.0.0.1');
+        console.log(`[Seed] Real Primary Node registered: Cloud-Node-01 (${hostName}) [${hostCpuCount} Cores, ${hostRamTotalMb}MB RAM]`);
     }
     // 5. Seed System Settings & Branding with Theme Presets
     const defaultSettings = {

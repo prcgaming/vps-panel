@@ -7,24 +7,27 @@ import {
   Power, 
   RotateCcw, 
   Trash2, 
-  RefreshCw,
-  MoreVertical,
-  CheckCircle,
-  AlertTriangle,
-  RotateCw,
-  Key,
-  Monitor,
-  Disc
+  RefreshCw, 
+  MoreVertical, 
+  CheckCircle, 
+  AlertTriangle, 
+  RotateCw, 
+  Key, 
+  Monitor, 
+  Disc,
+  Sliders,
+  Folder
 } from 'lucide-react';
 import { api } from '../api/client';
 import { VpsInstance } from '../types';
 
 interface VpsListPageProps {
   onOpenConsole: (vps: VpsInstance) => void;
+  onOpenManage: (vps: VpsInstance) => void;
   onOpenCreateVps: () => void;
 }
 
-export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenCreateVps }) => {
+export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenManage, onOpenCreateVps }) => {
   const [instances, setInstances] = useState<VpsInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -160,7 +163,13 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenC
                     {/* Name */}
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-100">{vps.name}</span>
+                        <button
+                          onClick={() => onOpenManage(vps)}
+                          className="font-semibold text-slate-100 hover:text-cyan-300 hover:underline transition text-left"
+                          title="Open Server Manager"
+                        >
+                          {vps.name}
+                        </button>
                         {vps.virt_type === 'container' ? (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
                             Container
@@ -226,6 +235,16 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenC
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         
+                        {/* Manage Button (Pterodactyl-style) */}
+                        <button
+                          onClick={() => onOpenManage(vps)}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 transition shadow-sm"
+                          title="Open Server Manager (File Manager, SSH Maker, Console, Reinstall)"
+                        >
+                          <Sliders className="w-3.5 h-3.5" />
+                          <span>Manage</span>
+                        </button>
+
                         {/* Terminal Console */}
                         <button
                           onClick={() => onOpenConsole(vps)}

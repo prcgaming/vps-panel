@@ -1,6 +1,6 @@
-# Lunar VPS Panel - Dedicated HVM Cloud & Hypervisor Control Panel
+# Lunar VPS Panel - Dedicated HVM Client Cloud & Hypervisor Control Panel
 
-A next-generation, high-performance **HVM (Hardware Virtual Machine)** and multi-node cloud virtualization control panel with a centralized Master Controller, interactive out-of-band Web Serial Console (`xterm.js`), automated IPAM, 8 visual design themes, public hosting website system, and distributed worker node daemons supporting **KVM Hardware Virtualization & High-Density System Containers**.
+A next-generation, luxury-styled **HVM (Hardware Virtual Machine)** and multi-node cloud virtualization control panel with a dedicated Client Cloud Console (`/panel`), Platform Administrator Console (`/admin-panel`), Pterodactyl-style server manager (File Manager, 1-Click SSH Maker, Live xterm.js serial console, Web VNC display, and OS Rebuild), automated IPAM, 8 visual design themes, public hosting website system, and distributed worker node daemons supporting **KVM Hardware Virtualization & High-Density System Containers**.
 
 ![VPS Panel Architecture](https://img.shields.io/badge/Architecture-HVM%20%7C%20Multi--Node-06b6d4?style=for-the-badge)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Fullstack-3178c6?style=for-the-badge&logo=typescript)
@@ -13,12 +13,22 @@ A next-generation, high-performance **HVM (Hardware Virtual Machine)** and multi
 
 ## 🌟 Key Features
 
+- 🎮 **Pterodactyl-Style Server Management**: Manage your virtual servers like modern gaming & cloud instances:
+  - 📁 **Real-Time File Manager**: Directory navigation with breadcrumbs, file inspection, creation, deletion, and built-in luxury code editor.
+  - 🔑 **1-Click SSH Key Maker**: Instant 2048-bit RSA key pair generator with automatic injection into `/root/.ssh/authorized_keys`, `.pem` private key download, and 1-click terminal connection string (`ssh -i id_rsa.pem root@<ip> -p 22`).
+  - 🌐 **SSHX Collaborative Terminal**: Direct integration for live, encrypted collaborative terminal sessions over the web.
+  - 🔒 **Root Password Manager**: Reveal, hide, copy, and reset root credentials on the fly.
+  - 🔄 **OS Rebuild & Reinstall**: 1-click reinstallation of Ubuntu, Debian, Alpine, Windows Server, Desktop GUI, or custom ISOs.
+- 🔀 **Clean Routing & Seamless Admin/Client View**:
+  - `/login`: Sleek obsidian login & registration interface.
+  - `/panel`: Client Cloud Console (default view for all users, including administrators).
+  - `/admin-panel`: Platform Administrator Console with cluster compute nodes, IPAM, and platform settings. Administrators can switch between `/panel` and `/admin-panel` with a 1-click toggle near their profile.
 - 🚀 **Dedicated HVM (Hardware Virtual Machine)**: Full hardware virtualization via KVM & QEMU with dedicated guest OS kernels, VirtIO bus acceleration, QCOW2 storage, swap memory, and support for Docker inside VPS, WireGuard VPNs, Linux, and Windows Server VMs.
 - 🪟 **Windows & Graphical Desktop Support**: Native support for **Windows Server 2022, Windows Server 2019, Windows 11 Pro**, as well as graphical desktop environments (Ubuntu Desktop GUI, Debian Desktop GUI) with out-of-the-box SATA storage and display drivers.
 - 💿 **Custom ISO Boot & Manual OS Install**: Mount any direct HTTP/HTTPS bootable `.iso` image as an IDE CD-ROM drive (`<boot dev='cdrom'/>`) to install your own customized distributions or proprietary operating systems.
 - 🖥️ **Dual-Mode Web Console (Serial xterm.js + Web VNC Display)**: Switch between high-speed serial terminal (`xterm.js`) and full graphical in-browser **Web VNC Display** with virtual mouse, keyboard injection, and essential Windows key combos (`Send Ctrl+Alt+Del`, `Win Key`, `Alt+Tab`).
 - ⚡ **Dual-Engine Hybrid Hypervisor**: Support for both dedicated HVM virtual machines and ultra-fast, high-density system containers (LXC / Docker) on the same cluster.
-- 🌐 **Public Hosting Website / Client Portal System**: Built-in modern public-facing hosting website (`apps/web`) ready to install on your root domain (e.g. `lunars.indevs.in`) with live cluster telemetry ping and deep-linked pricing plans linked directly to your Master Panel (`https://vps.lunars.indevs.in`).
+- 🌐 **Public Hosting Website / Client Portal System**: Built-in modern public-facing hosting website (`apps/web`) ready to install on your root domain (e.g. `lunars.indevs.in`) with live cluster telemetry ping and deep-linked pricing plans linked directly to your Client Panel (`https://vps.lunars.indevs.in`).
 - 🎨 **8 Unique Visual Design Themes**: More than just colors — choose from 8 distinct layout styles and aesthetics (Cockpit Glass HUD, Minimalist Flat SaaS, Datacenter NOC Pro, Retro Synthwave, Terminal Matrix, Nordic Frost, OLED Pure Black, and Valkyrie Crimson).
 - 🔓 **100% Free & Unlimited Forever**: Zero license restrictions, zero license keys required, zero artificial limits on nodes or VPS instances.
 - 🖥️ **Interactive Web Serial Console (`xterm.js`)**: Real-time terminal shell connected directly to the guest VM or container via encrypted low-latency WebSockets.

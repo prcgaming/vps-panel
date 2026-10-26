@@ -57,6 +57,12 @@ export const api = {
   createVps: (data: any) => apiRequest('/vps', { method: 'POST', body: JSON.stringify(data) }),
   actionVps: (id: string, action: string, payload?: any) => apiRequest(`/vps/${id}/action`, { method: 'POST', body: JSON.stringify({ action, payload }) }),
   deleteVps: (id: string) => apiRequest(`/vps/${id}`, { method: 'DELETE' }),
+  getVpsFiles: (id: string, path = '/') => apiRequest(`/vps/${id}/files?path=${encodeURIComponent(path)}`),
+  getVpsFileContent: (id: string, path: string) => apiRequest(`/vps/${id}/files/content?path=${encodeURIComponent(path)}`),
+  saveVpsFileContent: (id: string, path: string, content: string) => apiRequest(`/vps/${id}/files/content`, { method: 'POST', body: JSON.stringify({ path, content }) }),
+  deleteVpsFile: (id: string, path: string) => apiRequest(`/vps/${id}/files?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
+  generateSshKey: (id: string) => apiRequest(`/vps/${id}/ssh-maker`, { method: 'POST' }),
+  resetVpsPassword: (id: string, password?: string) => apiRequest(`/vps/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) }),
 
   // IPAM
   getIpam: () => apiRequest('/ipam'),

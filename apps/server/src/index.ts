@@ -83,7 +83,7 @@ server.on('error', (err: any) => {
 
 server.listen(config.port, config.host, () => {
   console.log(`=======================================================`);
-  console.log(`  VPS PANEL MASTER CONTROLLER IS RUNNING`);
+  console.log(`  VPS CLIENT CLOUD PANEL CONTROLLER IS RUNNING`);
   console.log(`  HTTP API & UI: http://${config.host}:${config.port}`);
   console.log(`  WebSocket Hub: ws://${config.host}:${config.port}/ws/*`);
   console.log(`=======================================================`);
