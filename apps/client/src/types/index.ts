@@ -179,6 +179,34 @@ export interface SystemSettings {
   web_plans_json?: string;
   web_faqs_json?: string;
   web_custom_css?: string;
+  // WordPress-Style CMS & Premade Section Visibility
+  web_show_hero?: string;
+  web_show_plans?: string;
+  web_show_features?: string;
+  web_show_monitor?: string;
+  web_show_faq?: string;
+  web_pages_json?: string;
+  web_custom_sections_json?: string;
   [key: string]: string | undefined;
 }
+
+export interface WebCustomPage {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  showInNav?: boolean;
+  showInFooter?: boolean;
+  isPublished?: boolean;
+  updatedAt?: string;
+}
+
+export interface WebCustomSection {
+  id: string;
+  title: string;
+  subtitle?: string;
+  content: string;
+  isPublished?: boolean;
+}
+
 

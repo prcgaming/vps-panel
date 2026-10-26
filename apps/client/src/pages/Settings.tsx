@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useTheme, THEME_PRESETS, ThemePreset } from '../context/ThemeContext';
-import { SystemSettings } from '../types';
+import { SystemSettings, WebCustomPage, WebCustomSection } from '../types';
 import { 
   Palette, Globe, Download, Terminal, ArrowUpCircle, CheckCircle, 
   CheckCircle2, Save, RefreshCw, Copy, Check, Server, Layers, Cpu, ShieldCheck,
-  Image, Gem, Sliders, Sparkles, Plus, Trash2, ExternalLink, Code2, AlertTriangle
+  Image, Gem, Sliders, Sparkles, Plus, Trash2, ExternalLink, Code2, AlertTriangle,
+  FileText, Layout, Eye, EyeOff, Edit3, X, CheckSquare, Square, Link2, BookOpen
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -31,6 +32,39 @@ const DEFAULT_PLANS: WebPlanItem[] = [
   { id: 'plan-starter', name: 'Cloud Starter', price: '$3.99 / mo', badge: 'Most Popular', cpu: 2, ram: '2 GB RAM', disk: '40 GB NVMe', bandwidth: '3 TB Bandwidth', buttonText: 'Deploy Cloud VPS', buttonUrl: '', isPopular: true },
   { id: 'plan-pro', name: 'Cloud Power Pro', price: '$7.99 / mo', badge: 'High Performance', cpu: 4, ram: '4 GB RAM', disk: '80 GB NVMe', bandwidth: '5 TB Bandwidth', buttonText: 'Deploy Power Pro', buttonUrl: '', isPopular: false },
   { id: 'plan-enterprise', name: 'Cloud Dedicated HVM', price: '$14.99 / mo', badge: 'Dedicated KVM', cpu: 8, ram: '8 GB RAM', disk: '160 GB NVMe', bandwidth: '10 TB Bandwidth', buttonText: 'Deploy Enterprise', buttonUrl: '', isPopular: false }
+];
+
+const DEFAULT_PAGES: WebCustomPage[] = [
+  {
+    id: 'page-terms',
+    title: 'Terms of Service',
+    slug: 'terms',
+    content: `## Terms of Service\n\nWelcome to our High-Performance Cloud VPS network.\n\n### 1. Acceptable Use Policy\nAll virtual machines must be used in compliance with international and local laws. Any illicit activities including malicious scanning, outgoing DDoS, brute-force attacks, or spamming will result in immediate service termination without refund.\n\n### 2. SLA & Hardware Reliability\nOur KVM compute clusters maintain a 99.99% hardware uptime guarantee. Automated monitoring systems continuously ensure CPU and network stability across all hypervisor nodes.\n\n### 3. Backups & Data Retention\nUsers are responsible for maintaining off-site backups of their critical data. While enterprise RAID-10 NVMe storage is used, we recommend scheduled remote snapshots.\n\n### 4. Support & Contacts\nFor inquiries or support tickets, join our official Discord community or contact our support team.`,
+    showInNav: false,
+    showInFooter: true,
+    isPublished: true,
+    updatedAt: '2026-10-26'
+  },
+  {
+    id: 'page-privacy',
+    title: 'Privacy Policy',
+    slug: 'privacy',
+    content: `## Privacy Policy\n\nYour privacy and operational security are our top priorities.\n\n### Data We Collect\nWe only collect basic authentication details (email, username) required to access your Client Console and manage deployed instances.\n\n### No Traffic Inspection\nWe do not monitor, log, or inspect traffic contents running inside your virtual machines. Full root access belongs solely to the instance owner.\n\n### Security Measures\nAll console connections and API endpoints use TLS 1.3 encryption with strict firewall filtering.`,
+    showInNav: false,
+    showInFooter: true,
+    isPublished: true,
+    updatedAt: '2026-10-26'
+  },
+  {
+    id: 'page-about',
+    title: 'About Us',
+    slug: 'about',
+    content: `## About Our Cloud Infrastructure\n\nWe provide next-generation, high-density KVM hardware virtualization engineered for developers, power users, and enterprise applications.\n\n### Our Architecture\n- **Dedicated KVM / QEMU hypervisors** with zero CPU oversubscription on high-tier plans.\n- **Direct NVMe Gen4 Storage** delivering over 5,000 MB/s IOPS.\n- **Automated Anycast Routing** and low-latency global peering.\n- **Real-Time Client Console** with emergency in-browser Web Serial terminal access.\n\nReady to get started? Access the Client Portal from the navigation bar above.`,
+    showInNav: true,
+    showInFooter: true,
+    isPublished: true,
+    updatedAt: '2026-10-26'
+  }
 ];
 
 const WALLPAPER_PRESETS = [
@@ -69,17 +103,30 @@ export const Settings: React.FC<SettingsProps> = () => {
     free_tier_max_ram_mb: '1024',
     free_tier_max_disk_gb: '20',
     free_tier_allowed_os: 'all',
-    // Website Customizer
+    // Website Customizer & Section Visibility Defaults
     web_hero_badge: 'Enterprise Dedicated HVM Virtualization',
     web_hero_title: 'Next-Generation High-Performance Cloud VPS',
     web_hero_subtitle: 'Deploy dedicated KVM Hardware Virtual Machines & high-density LXC containers with raw NVMe storage and instant setup.',
     web_discord_url: 'https://discord.gg/',
     web_telegram_url: 'https://t.me/',
+    web_show_hero: '1',
+    web_show_plans: '1',
+    web_show_features: '1',
+    web_show_monitor: '1',
+    web_show_faq: '1',
     web_plans_json: JSON.stringify(DEFAULT_PLANS),
+    web_pages_json: JSON.stringify(DEFAULT_PAGES),
+    web_custom_sections_json: '[]',
     web_custom_css: ''
   });
 
   const [plansList, setPlansList] = useState<WebPlanItem[]>(DEFAULT_PLANS);
+  const [pagesList, setPagesList] = useState<WebCustomPage[]>(DEFAULT_PAGES);
+  const [customSectionsList, setCustomSectionsList] = useState<WebCustomSection[]>([]);
+  const [activeWebTab, setActiveWebTab] = useState<'visibility' | 'pages' | 'sections' | 'plans' | 'branding'>('visibility');
+  const [editingPage, setEditingPage] = useState<WebCustomPage | null>(null);
+  const [editingSection, setEditingSection] = useState<WebCustomSection | null>(null);
+
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
   const [themeSuccessMsg, setThemeSuccessMsg] = useState<string | null>(null);
@@ -100,6 +147,18 @@ export const Settings: React.FC<SettingsProps> = () => {
             try {
               const parsed = JSON.parse(res.settings.web_plans_json);
               if (Array.isArray(parsed)) setPlansList(parsed);
+            } catch {}
+          }
+          if (res.settings.web_pages_json) {
+            try {
+              const parsed = JSON.parse(res.settings.web_pages_json);
+              if (Array.isArray(parsed)) setPagesList(parsed);
+            } catch {}
+          }
+          if (res.settings.web_custom_sections_json) {
+            try {
+              const parsed = JSON.parse(res.settings.web_custom_sections_json);
+              if (Array.isArray(parsed)) setCustomSectionsList(parsed);
             } catch {}
           }
         }
@@ -155,6 +214,93 @@ export const Settings: React.FC<SettingsProps> = () => {
     }
   };
 
+  // Section Visibility Toggles (Completely remove plans or default sections)
+  const handleToggleSection = (key: 'web_show_hero' | 'web_show_plans' | 'web_show_features' | 'web_show_monitor' | 'web_show_faq') => {
+    const isCurrentlyVisible = settings[key] !== '0';
+    const nextVal = isCurrentlyVisible ? '0' : '1';
+    setSettings(prev => ({ ...prev, [key]: nextVal }));
+  };
+
+  // WordPress-Style Custom Pages Handlers
+  const handleAddNewPage = () => {
+    const id = `page-${Date.now().toString(36)}`;
+    const newPage: WebCustomPage = {
+      id,
+      title: 'New Page',
+      slug: `custom-page-${Date.now().toString(36).slice(-4)}`,
+      content: '## New Page\n\nAdd your custom page content here using Markdown or HTML.\n\n- Point 1\n- Point 2\n- Point 3',
+      showInNav: true,
+      showInFooter: true,
+      isPublished: true,
+      updatedAt: new Date().toISOString().split('T')[0]
+    };
+    setEditingPage(newPage);
+  };
+
+  const handleSavePage = (pageToSave: WebCustomPage) => {
+    if (!pageToSave.title.trim()) return alert('Page title is required');
+    const cleanSlug = pageToSave.slug.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-') || `page-${Date.now()}`;
+    const updatedPage: WebCustomPage = { 
+      ...pageToSave, 
+      slug: cleanSlug, 
+      updatedAt: new Date().toISOString().split('T')[0] 
+    };
+    
+    const existingIdx = pagesList.findIndex(p => p.id === updatedPage.id);
+    let updatedPages: WebCustomPage[];
+    if (existingIdx >= 0) {
+      updatedPages = [...pagesList];
+      updatedPages[existingIdx] = updatedPage;
+    } else {
+      updatedPages = [...pagesList, updatedPage];
+    }
+    setPagesList(updatedPages);
+    setSettings(prev => ({ ...prev, web_pages_json: JSON.stringify(updatedPages) }));
+    setEditingPage(null);
+  };
+
+  const handleDeletePage = (id: string) => {
+    if (!confirm('Are you sure you want to delete this custom page?')) return;
+    const updated = pagesList.filter(p => p.id !== id);
+    setPagesList(updated);
+    setSettings(prev => ({ ...prev, web_pages_json: JSON.stringify(updated) }));
+  };
+
+  // Custom Homepage Sections Handlers
+  const handleAddNewSection = () => {
+    const newSec: WebCustomSection = {
+      id: `sec-${Date.now().toString(36)}`,
+      title: 'Global Datacenter Regions & Latency',
+      subtitle: 'Low-latency NVMe compute instances across premier tier-3 facilities worldwide.',
+      content: '### Enterprise Connectivity\n\nOur hypervisors peer with over 500 networks and major Tier-1 internet exchanges. Experience unthrottled 10Gbps uplinks with automated anti-DDoS protection.\n\n- **US East (Ashburn)**: < 10ms to NYC, Chicago\n- **EU Central (Frankfurt)**: < 15ms to London, Amsterdam, Paris\n- **Asia Pacific (Singapore)**: < 30ms to Tokyo, Sydney, Hong Kong',
+      isPublished: true
+    };
+    setEditingSection(newSec);
+  };
+
+  const handleSaveSection = (secToSave: WebCustomSection) => {
+    if (!secToSave.title.trim()) return alert('Section title is required');
+    const existingIdx = customSectionsList.findIndex(s => s.id === secToSave.id);
+    let updatedSections: WebCustomSection[];
+    if (existingIdx >= 0) {
+      updatedSections = [...customSectionsList];
+      updatedSections[existingIdx] = secToSave;
+    } else {
+      updatedSections = [...customSectionsList, secToSave];
+    }
+    setCustomSectionsList(updatedSections);
+    setSettings(prev => ({ ...prev, web_custom_sections_json: JSON.stringify(updatedSections) }));
+    setEditingSection(null);
+  };
+
+  const handleDeleteSection = (id: string) => {
+    if (!confirm('Are you sure you want to delete this homepage section?')) return;
+    const updated = customSectionsList.filter(s => s.id !== id);
+    setCustomSectionsList(updated);
+    setSettings(prev => ({ ...prev, web_custom_sections_json: JSON.stringify(updated) }));
+  };
+
+  // Pricing Plans Handlers
   const handlePlanChange = (index: number, field: keyof WebPlanItem, value: any) => {
     const updated = [...plansList];
     updated[index] = { ...updated[index], [field]: value };
@@ -207,10 +353,12 @@ export const Settings: React.FC<SettingsProps> = () => {
     try {
       const payload = {
         ...settings,
-        web_plans_json: JSON.stringify(plansList)
+        web_plans_json: JSON.stringify(plansList),
+        web_pages_json: JSON.stringify(pagesList),
+        web_custom_sections_json: JSON.stringify(customSectionsList)
       };
       await api.updateSettings(payload);
-      setSettingsMsg('All configurations, custom wallpapers, free tier limits, and website settings saved successfully!');
+      setSettingsMsg('All configurations, custom pages, section visibilities, and website settings saved successfully!');
       setTimeout(() => setSettingsMsg(null), 4000);
     } catch (err: any) {
       setSettingsMsg(`Error: ${err.message || 'Failed to save settings'}`);
@@ -587,104 +735,686 @@ export const Settings: React.FC<SettingsProps> = () => {
       </div>
 
       {/* ==================================================================== */}
-      {/* 3. PUBLIC WEBSITE CUSTOMIZER & PRICING PLANS */}
+      {/* 3. PUBLIC WEBSITE & WORDPRESS-STYLE CMS STUDIO */}
       {/* ==================================================================== */}
       <div className={`p-6 shadow-xl backdrop-blur space-y-6 ${currentTheme.cardStyle}`}>
-        <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/[0.08] gap-4">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl ${currentTheme.bgBadge}`}>
               <Globe className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                Public Website Portal Customizer & Pricing Plans
+                Public Website Portal & CMS Studio
                 <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded font-mono font-bold">
-                  Root Domain Landing Page
+                  WordPress-Style Studio
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Customize headlines, community links, and public pricing plans on your hosting website without editing code.
+                Manage section visibility, remove default elements, create custom pages, insert homepage blocks, and customize pricing plans.
               </p>
             </div>
           </div>
+
+          {/* Sub-Tabs Selector */}
+          <div className="flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-white/[0.08] overflow-x-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setActiveWebTab('visibility')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                activeWebTab === 'visibility' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layout className="w-3.5 h-3.5" />
+              <span>Section Visibility</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveWebTab('pages')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                activeWebTab === 'pages' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Custom Pages ({pagesList.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveWebTab('sections')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                activeWebTab === 'sections' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Custom Blocks ({customSectionsList.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveWebTab('plans')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                activeWebTab === 'plans' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Pricing Plans ({plansList.length})</span>
+              {settings.web_show_plans === '0' && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="Plans section hidden on website" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveWebTab('branding')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                activeWebTab === 'branding' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Hero & Branding</span>
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          
-          {/* Hero Headlines */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Website Hero Badge
-              </label>
-              <input
-                type="text"
-                value={settings.web_hero_badge || ''}
-                onChange={(e) => setSettings({ ...settings, web_hero_badge: e.target.value })}
-                placeholder="Enterprise Dedicated HVM Virtualization"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
-              />
+        {/* ------------------------------------------------------------------ */}
+        {/* TAB 1: SECTION VISIBILITY (REMOVE DEFAULTS & REMOVE PLANS) */}
+        {/* ------------------------------------------------------------------ */}
+        {activeWebTab === 'visibility' && (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/20 text-cyan-200 text-xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>
+                  Toggle any default premade section below. Turning a section OFF completely removes it from the public website layout and navigation menus.
+                </span>
+              </div>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Website Hero Title
-              </label>
-              <input
-                type="text"
-                value={settings.web_hero_title || ''}
-                onChange={(e) => setSettings({ ...settings, web_hero_title: e.target.value })}
-                placeholder="Next-Generation High-Performance Cloud VPS"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Pricing Plans Section Toggle */}
+              <div className={`p-4 rounded-2xl border transition ${settings.web_show_plans !== '0' ? 'bg-slate-900/80 border-emerald-500/30' : 'bg-slate-950/80 border-rose-500/30'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${settings.web_show_plans !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      <Layers className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Pricing & Compute Plans Section</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                          settings.web_show_plans !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {settings.web_show_plans !== '0' ? 'Visible' : 'Hidden / Removed'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Shows the pricing cards grid and the "Compute Plans" link in header & footer.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSection('web_show_plans')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      settings.web_show_plans !== '0'
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
+                    {settings.web_show_plans !== '0' ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{settings.web_show_plans !== '0' ? 'Shown' : 'Hidden'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Hero Banner Section Toggle */}
+              <div className={`p-4 rounded-2xl border transition ${settings.web_show_hero !== '0' ? 'bg-slate-900/80 border-emerald-500/30' : 'bg-slate-950/80 border-rose-500/30'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${settings.web_show_hero !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Homepage Hero Banner</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                          settings.web_show_hero !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {settings.web_show_hero !== '0' ? 'Visible' : 'Hidden / Removed'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Top banner with hero title, subtitle, badges, and primary action buttons.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSection('web_show_hero')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      settings.web_show_hero !== '0'
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
+                    {settings.web_show_hero !== '0' ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{settings.web_show_hero !== '0' ? 'Shown' : 'Hidden'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Features & Architecture Grid Toggle */}
+              <div className={`p-4 rounded-2xl border transition ${settings.web_show_features !== '0' ? 'bg-slate-900/80 border-emerald-500/30' : 'bg-slate-950/80 border-rose-500/30'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${settings.web_show_features !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Features & Architecture Grid</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                          settings.web_show_features !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {settings.web_show_features !== '0' ? 'Visible' : 'Hidden / Removed'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        6 feature cards highlighting KVM isolation, VirtIO, DDoS mitigation, and serial console.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSection('web_show_features')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      settings.web_show_features !== '0'
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
+                    {settings.web_show_features !== '0' ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{settings.web_show_features !== '0' ? 'Shown' : 'Hidden'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Cluster Health / Telemetry Toggle */}
+              <div className={`p-4 rounded-2xl border transition ${settings.web_show_monitor !== '0' ? 'bg-slate-900/80 border-emerald-500/30' : 'bg-slate-950/80 border-rose-500/30'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${settings.web_show_monitor !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      <Server className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Live Cluster Health Card</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                          settings.web_show_monitor !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {settings.web_show_monitor !== '0' ? 'Visible' : 'Hidden / Removed'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Live heartbeat card showing active driver engine, VirtIO storage, and cluster stats.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSection('web_show_monitor')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      settings.web_show_monitor !== '0'
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
+                    {settings.web_show_monitor !== '0' ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{settings.web_show_monitor !== '0' ? 'Shown' : 'Hidden'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* FAQ Section Toggle */}
+              <div className={`p-4 rounded-2xl border transition ${settings.web_show_faq !== '0' ? 'bg-slate-900/80 border-emerald-500/30' : 'bg-slate-950/80 border-rose-500/30'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${settings.web_show_faq !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Frequently Asked Questions (FAQ)</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                          settings.web_show_faq !== '0' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {settings.web_show_faq !== '0' ? 'Visible' : 'Hidden / Removed'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        FAQ grid addressing HVM virtualization, SSH login, and hardware upgrades.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSection('web_show_faq')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      settings.web_show_faq !== '0'
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
+                    {settings.web_show_faq !== '0' ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{settings.web_show_faq !== '0' ? 'Shown' : 'Hidden'}</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
+        )}
 
-          <div>
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Website Hero Subtitle
-            </label>
-            <textarea
-              rows={2}
-              value={settings.web_hero_subtitle || ''}
-              onChange={(e) => setSettings({ ...settings, web_hero_subtitle: e.target.value })}
-              placeholder="Deploy dedicated KVM Hardware Virtual Machines & high-density LXC containers with raw NVMe storage and instant setup."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-xs focus:outline-none focus:border-cyan-500"
-            />
-          </div>
+        {/* ------------------------------------------------------------------ */}
+        {/* TAB 2: WORDPRESS-STYLE CUSTOM PAGES BUILDER */}
+        {/* ------------------------------------------------------------------ */}
+        {activeWebTab === 'pages' && (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-cyan-400" />
+                  <span>Custom Pages Manager</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-300">
+                    {pagesList.length} Pages Created
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Create standalone pages (e.g. Terms of Service, Privacy Policy, Rules, About Us). They automatically get dedicated links and routing on your website.
+                </p>
+              </div>
 
-          {/* Social Links */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Discord Community Link
-              </label>
-              <input
-                type="text"
-                value={settings.web_discord_url || ''}
-                onChange={(e) => setSettings({ ...settings, web_discord_url: e.target.value })}
-                placeholder="https://discord.gg/yourserver"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-              />
+              <button
+                type="button"
+                onClick={handleAddNewPage}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition shadow"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create New Page</span>
+              </button>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Telegram Channel Link
-              </label>
-              <input
-                type="text"
-                value={settings.web_telegram_url || ''}
-                onChange={(e) => setSettings({ ...settings, web_telegram_url: e.target.value })}
-                placeholder="https://t.me/yourchannel"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-              />
+            {/* Page Editor Modal / Drawer */}
+            {editingPage && (
+              <div className="p-5 bg-slate-900 border border-cyan-500/40 rounded-2xl space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2 text-white font-bold text-sm">
+                    <Edit3 className="w-4 h-4 text-cyan-400" />
+                    <span>{editingPage.id.includes('page-') ? 'Edit Page' : 'New Custom Page'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPage(null)}
+                    className="p-1 text-slate-400 hover:text-white rounded-lg transition"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Page Title
+                    </label>
+                    <input
+                      type="text"
+                      value={editingPage.title}
+                      onChange={(e) => {
+                        const title = e.target.value;
+                        const slug = title.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+                        setEditingPage(prev => prev ? { ...prev, title, slug: prev.slug === '' || prev.slug.startsWith('custom-page') ? slug : prev.slug } : null);
+                      }}
+                      placeholder="e.g. Server Rules & Guidelines"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      URL Slug & Path
+                    </label>
+                    <div className="flex items-center bg-slate-950 border border-slate-700 rounded-xl px-3 py-2">
+                      <span className="text-xs text-slate-500 font-mono">/#</span>
+                      <input
+                        type="text"
+                        value={editingPage.slug}
+                        onChange={(e) => setEditingPage(prev => prev ? { ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-') } : null)}
+                        placeholder="rules"
+                        className="w-full bg-transparent text-cyan-300 font-mono text-xs focus:outline-none ml-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Display Toggles */}
+                <div className="flex flex-wrap gap-4 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={!!editingPage.showInNav}
+                      onChange={(e) => setEditingPage(prev => prev ? { ...prev, showInNav: e.target.checked } : null)}
+                      className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span>Show link in Top Navigation Bar</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={!!editingPage.showInFooter}
+                      onChange={(e) => setEditingPage(prev => prev ? { ...prev, showInFooter: e.target.checked } : null)}
+                      className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span>Show link in Footer</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-emerald-300">
+                    <input
+                      type="checkbox"
+                      checked={editingPage.isPublished !== false}
+                      onChange={(e) => setEditingPage(prev => prev ? { ...prev, isPublished: e.target.checked } : null)}
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500"
+                    />
+                    <span>Published (Live on Website)</span>
+                  </label>
+                </div>
+
+                {/* Content Editor */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Page Content (Markdown & HTML Supported)
+                    </label>
+                    <span className="text-[10px] text-slate-500 font-mono">Supports # Headings, **bold**, lists, and raw HTML</span>
+                  </div>
+                  <textarea
+                    rows={8}
+                    value={editingPage.content}
+                    onChange={(e) => setEditingPage(prev => prev ? { ...prev, content: e.target.value } : null)}
+                    placeholder="## Welcome&#10;&#10;Write your page content here..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-200 font-mono text-xs focus:outline-none focus:border-cyan-500 leading-relaxed"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPage(null)}
+                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSavePage(editingPage)}
+                    className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition shadow"
+                  >
+                    Save Page
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Pages Cards Grid */}
+            <div className="space-y-3">
+              {pagesList.map((p) => (
+                <div key={p.id} className="p-4 bg-slate-900/80 border border-white/[0.08] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-cyan-500/20 transition">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">{p.title}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                        /#{p.slug}
+                      </span>
+                      {p.isPublished === false && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          Draft
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                      {p.showInNav && <span className="flex items-center gap-1 text-emerald-400"><Check className="w-3 h-3" /> Header Menu</span>}
+                      {p.showInFooter && <span className="flex items-center gap-1 text-sky-400"><Check className="w-3 h-3" /> Footer Link</span>}
+                      <span>Updated: {p.updatedAt || 'Recent'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingPage(p)}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 border border-white/10"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePage(p.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition"
+                      title="Delete Page"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Interactive Pricing Plans Editor */}
-          <div className="pt-4 border-t border-white/[0.08]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        {/* ------------------------------------------------------------------ */}
+        {/* TAB 3: CUSTOM HOMEPAGE BLOCKS & SECTIONS */}
+        {/* ------------------------------------------------------------------ */}
+        {activeWebTab === 'sections' && (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-cyan-400" />
+                  <span>Custom Homepage Blocks & Elements</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-300">
+                    {customSectionsList.length} Custom Blocks Active
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Insert customized content sections anywhere on your public homepage. Add announcements, location maps, embeds, or special promotions.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddNewSection}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition shadow"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Custom Block</span>
+              </button>
+            </div>
+
+            {/* Custom Section Editor */}
+            {editingSection && (
+              <div className="p-5 bg-slate-900 border border-cyan-500/40 rounded-2xl space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2 text-white font-bold text-sm">
+                    <Edit3 className="w-4 h-4 text-cyan-400" />
+                    <span>Edit Homepage Block</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingSection(null)}
+                    className="p-1 text-slate-400 hover:text-white rounded-lg transition"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Section Title
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSection.title}
+                      onChange={(e) => setEditingSection(prev => prev ? { ...prev, title: e.target.value } : null)}
+                      placeholder="e.g. Enterprise Global Datacenters"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Section Subtitle / Tagline
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSection.subtitle || ''}
+                      onChange={(e) => setEditingSection(prev => prev ? { ...prev, subtitle: e.target.value } : null)}
+                      placeholder="e.g. Sub-millisecond routing across 4 continents"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Section Content (Markdown or Raw HTML)
+                    </label>
+                    <span className="text-[10px] text-slate-500 font-mono">Supports HTML tags, widgets, or markdown</span>
+                  </div>
+                  <textarea
+                    rows={6}
+                    value={editingSection.content}
+                    onChange={(e) => setEditingSection(prev => prev ? { ...prev, content: e.target.value } : null)}
+                    placeholder="Enter section content or HTML..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-200 font-mono text-xs focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/[0.08]">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-emerald-300">
+                    <input
+                      type="checkbox"
+                      checked={editingSection.isPublished !== false}
+                      onChange={(e) => setEditingSection(prev => prev ? { ...prev, isPublished: e.target.checked } : null)}
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500"
+                    />
+                    <span>Visible on Live Homepage</span>
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingSection(null)}
+                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveSection(editingSection)}
+                      className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-xl transition shadow"
+                    >
+                      Save Block
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Sections List */}
+            {customSectionsList.length === 0 ? (
+              <div className="p-8 text-center bg-slate-900/40 border border-dashed border-white/10 rounded-2xl space-y-2">
+                <Sliders className="w-8 h-8 mx-auto text-slate-500" />
+                <h4 className="text-sm font-semibold text-white">No Custom Homepage Blocks Yet</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Click "Add Custom Block" above to insert announcements, global location tables, or custom embeds directly into your homepage.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {customSectionsList.map((sec) => (
+                  <div key={sec.id} className="p-4 bg-slate-900/80 border border-white/[0.08] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-cyan-500/20 transition">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{sec.title}</span>
+                        {sec.isPublished === false && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                      {sec.subtitle && <p className="text-xs text-slate-400">{sec.subtitle}</p>}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingSection(sec)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 border border-white/10"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSection(sec.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition"
+                        title="Delete Section"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* TAB 4: PRICING PLANS EDITOR */}
+        {/* ------------------------------------------------------------------ */}
+        {activeWebTab === 'plans' && (
+          <div className="space-y-4 animate-in fade-in">
+            {settings.web_show_plans === '0' && (
+              <div className="p-4 rounded-2xl bg-amber-950/50 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    <strong>Notice:</strong> The Pricing Plans section is currently <strong>HIDDEN</strong> on your website. Switch to the <strong>"Section Visibility"</strong> tab above to turn it back on.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleSection('web_show_plans')}
+                  className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-200 rounded-lg text-xs font-bold transition shrink-0"
+                >
+                  Make Visible
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <span>Public Pricing Plans Editor</span>
@@ -693,7 +1423,7 @@ export const Settings: React.FC<SettingsProps> = () => {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Manage pricing tiers shown on the public website. You can customize the deploy button text and link, or clear all plans.
+                  Manage pricing tiers shown on the public website. You can customize deploy button text and links, or clear all plans.
                 </p>
               </div>
 
@@ -894,23 +1624,100 @@ export const Settings: React.FC<SettingsProps> = () => {
               </div>
             )}
           </div>
+        )}
 
-          {/* Injected Custom CSS */}
-          <div className="pt-2">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
-              <Code2 className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Public Website Injected Custom CSS</span>
-            </label>
-            <textarea
-              rows={3}
-              value={settings.web_custom_css || ''}
-              onChange={(e) => setSettings({ ...settings, web_custom_css: e.target.value })}
-              placeholder="/* Enter custom CSS rules to override public website styling */"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500"
-            />
+        {/* ------------------------------------------------------------------ */}
+        {/* TAB 5: HERO HEADLINES & BRANDING */}
+        {/* ------------------------------------------------------------------ */}
+        {activeWebTab === 'branding' && (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Website Hero Badge
+                </label>
+                <input
+                  type="text"
+                  value={settings.web_hero_badge || ''}
+                  onChange={(e) => setSettings({ ...settings, web_hero_badge: e.target.value })}
+                  placeholder="Enterprise Dedicated HVM Virtualization"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Website Hero Title
+                </label>
+                <input
+                  type="text"
+                  value={settings.web_hero_title || ''}
+                  onChange={(e) => setSettings({ ...settings, web_hero_title: e.target.value })}
+                  placeholder="Next-Generation High-Performance Cloud VPS"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Website Hero Subtitle
+              </label>
+              <textarea
+                rows={2}
+                value={settings.web_hero_subtitle || ''}
+                onChange={(e) => setSettings({ ...settings, web_hero_subtitle: e.target.value })}
+                placeholder="Deploy dedicated KVM Hardware Virtual Machines & high-density LXC containers with raw NVMe storage and instant setup."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-xs focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+
+            {/* Social Links */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Discord Community Link
+                </label>
+                <input
+                  type="text"
+                  value={settings.web_discord_url || ''}
+                  onChange={(e) => setSettings({ ...settings, web_discord_url: e.target.value })}
+                  placeholder="https://discord.gg/yourserver"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Telegram Channel Link
+                </label>
+                <input
+                  type="text"
+                  value={settings.web_telegram_url || ''}
+                  onChange={(e) => setSettings({ ...settings, web_telegram_url: e.target.value })}
+                  placeholder="https://t.me/yourchannel"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            {/* Injected Custom CSS */}
+            <div className="pt-2">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
+                <Code2 className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Public Website Injected Custom CSS</span>
+              </label>
+              <textarea
+                rows={3}
+                value={settings.web_custom_css || ''}
+                onChange={(e) => setSettings({ ...settings, web_custom_css: e.target.value })}
+                placeholder="/* Enter custom CSS rules to override public website styling */"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500"
+              />
+            </div>
           </div>
+        )}
 
-        </div>
       </div>
 
       {/* ==================================================================== */}

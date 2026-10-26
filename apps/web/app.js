@@ -145,7 +145,244 @@
         console.error('Failed to parse custom plans JSON', e);
       }
     }
+
+    // 7. Premade Section Visibility Controls (Allows removing plans completely, etc.)
+    applySectionVisibility(s);
+
+    // 8. Custom Homepage Sections & Blocks
+    renderCustomSections(s);
+
+    // 9. WordPress-Style Custom Pages & Routing
+    setupWordPressPages(s);
   }
+
+  let customPagesMap = {};
+
+  function parseMarkdown(text) {
+    if (!text) return '';
+    if (text.trim().startsWith('<') && text.trim().endsWith('>')) {
+      return text;
+    }
+    let html = text
+      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+      .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+      .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
+      .replace(/`([^`]+)`/gim, '<code>$1</code>')
+      .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
+      .replace(/\n\s*\n/gim, '</p><p>');
+
+    html = html.replace(/(<li>[\s\S]*?<\/li>)/gim, '<ul>$1</ul>');
+    return `<p>${html}</p>`;
+  }
+
+  function applySectionVisibility(s) {
+    // 1. Hero
+    const heroEl = document.getElementById('hero');
+    if (heroEl) {
+      if (s.web_show_hero === '0') heroEl.classList.add('section-hidden');
+      else heroEl.classList.remove('section-hidden');
+    }
+
+    // 2. Pricing Plans (Allows removing plans completely)
+    const plansEl = document.getElementById('plans');
+    const plansNav = document.querySelectorAll('[data-nav-target="plans"], [data-footer-target="plans"]');
+    if (plansEl) {
+      if (s.web_show_plans === '0') {
+        plansEl.classList.add('section-hidden');
+        plansNav.forEach(el => el.style.display = 'none');
+      } else {
+        plansEl.classList.remove('section-hidden');
+        plansNav.forEach(el => el.style.display = '');
+      }
+    }
+
+    // 3. Features
+    const featuresEl = document.getElementById('features');
+    const featuresNav = document.querySelectorAll('[data-nav-target="features"], [data-footer-target="features"]');
+    if (featuresEl) {
+      if (s.web_show_features === '0') {
+        featuresEl.classList.add('section-hidden');
+        featuresNav.forEach(el => el.style.display = 'none');
+      } else {
+        featuresEl.classList.remove('section-hidden');
+        featuresNav.forEach(el => el.style.display = '');
+      }
+    }
+
+    // 4. Cluster Monitor
+    const monitorEl = document.getElementById('monitor');
+    const monitorNav = document.querySelectorAll('[data-nav-target="monitor"]');
+    if (monitorEl) {
+      if (s.web_show_monitor === '0') {
+        monitorEl.classList.add('section-hidden');
+        monitorNav.forEach(el => el.style.display = 'none');
+      } else {
+        monitorEl.classList.remove('section-hidden');
+        monitorNav.forEach(el => el.style.display = '');
+      }
+    }
+
+    // 5. FAQ
+    const faqEl = document.getElementById('faq');
+    const faqNav = document.querySelectorAll('[data-nav-target="faq"]');
+    if (faqEl) {
+      if (s.web_show_faq === '0') {
+        faqEl.classList.add('section-hidden');
+        faqNav.forEach(el => el.style.display = 'none');
+      } else {
+        faqEl.classList.remove('section-hidden');
+        faqNav.forEach(el => el.style.display = '');
+      }
+    }
+  }
+
+  function renderCustomSections(s) {
+    const container = document.getElementById('custom-sections-container');
+    if (!container) return;
+    if (!s.web_custom_sections_json) {
+      container.innerHTML = '';
+      return;
+    }
+
+    try {
+      const sections = typeof s.web_custom_sections_json === 'string'
+        ? JSON.parse(s.web_custom_sections_json)
+        : s.web_custom_sections_json;
+      if (!Array.isArray(sections) || sections.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      for (const sec of sections) {
+        if (sec.isPublished === false) continue;
+        const slug = sec.id || (sec.title ? sec.title.toLowerCase().replace(/[^a-z0-9]/g, '-') : 'sec');
+        html += `
+          <section class="section custom-section" id="section-${slug}">
+            <div class="container">
+              <div class="section-head">
+                <h2>${sec.title || 'Custom Section'}</h2>
+                ${sec.subtitle ? `<p>${sec.subtitle}</p>` : ''}
+              </div>
+              <div class="custom-section-box glass">
+                ${parseMarkdown(sec.content || '')}
+              </div>
+            </div>
+          </section>
+        `;
+      }
+      container.innerHTML = html;
+    } catch (e) {
+      console.error('Failed to parse custom sections', e);
+    }
+  }
+
+  function setupWordPressPages(s) {
+    customPagesMap = {};
+    if (!s.web_pages_json) return;
+
+    try {
+      const pages = typeof s.web_pages_json === 'string'
+        ? JSON.parse(s.web_pages_json)
+        : s.web_pages_json;
+      if (!Array.isArray(pages)) return;
+
+      const navList = document.getElementById('header-nav-links');
+      const footerLinks = document.getElementById('footer-links');
+
+      document.querySelectorAll('.injected-page-link').forEach(el => el.remove());
+
+      for (const page of pages) {
+        if (page.isPublished === false) continue;
+        const slug = (page.slug || page.title.toLowerCase().replace(/[^a-z0-9]/g, '-')).replace(/^\/+/, '');
+        customPagesMap[slug] = page;
+        customPagesMap['/' + slug] = page;
+
+        if (page.showInNav && navList) {
+          const li = document.createElement('li');
+          li.className = 'injected-page-link';
+          li.innerHTML = `<a href="#${slug}">${page.title}</a>`;
+          navList.appendChild(li);
+        }
+
+        if (page.showInFooter && footerLinks) {
+          const a = document.createElement('a');
+          a.className = 'injected-page-link';
+          a.href = `#${slug}`;
+          a.textContent = page.title;
+          footerLinks.appendChild(a);
+        }
+      }
+
+      handleRouter();
+    } catch (e) {
+      console.error('Failed to parse custom pages', e);
+    }
+  }
+
+  function handleRouter() {
+    const rawHash = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageParam = urlParams.get('page');
+    const slug = rawHash || pageParam;
+
+    const homepageView = document.getElementById('homepage-view');
+    const pageContainer = document.getElementById('custom-page-container');
+    const pageTitle = document.getElementById('page-title');
+    const pageMeta = document.getElementById('page-meta');
+    const pageContent = document.getElementById('page-content');
+
+    if (!pageContainer || !homepageView) return;
+
+    const homeAnchors = ['features', 'plans', 'monitor', 'faq', 'hero', ''];
+
+    if (slug && !homeAnchors.includes(slug) && customPagesMap[slug]) {
+      const page = customPagesMap[slug];
+      homepageView.style.display = 'none';
+      pageContainer.style.display = 'block';
+
+      if (pageTitle) pageTitle.textContent = page.title;
+      if (pageMeta) {
+        pageMeta.innerHTML = `
+          <span>Updated: ${page.updatedAt || 'Recent'}</span>
+          <span>&bull;</span>
+          <span>${config.brandName || 'Cloud Portal'}</span>
+        `;
+      }
+      if (pageContent) {
+        pageContent.innerHTML = parseMarkdown(page.content || '');
+      }
+
+      document.title = `${page.title} - ${config.brandName || 'Lunar Cloud'}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      homepageView.style.display = '';
+      pageContainer.style.display = 'none';
+      document.title = `${config.brandName || 'Lunar Cloud HVM'} - Next-Gen Hardware Virtual Machines`;
+
+      if (slug && homeAnchors.includes(slug)) {
+        const target = document.getElementById(slug);
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('hashchange', handleRouter);
+
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('#page-back-btn');
+    if (target) {
+      e.preventDefault();
+      history.pushState('', document.title, window.location.pathname + window.location.search);
+      window.location.hash = '';
+      handleRouter();
+    }
+  });
 
   function renderCustomPlans(plans, panelUrl) {
     const container = document.getElementById('pricing-grid-container');

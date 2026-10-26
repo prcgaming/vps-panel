@@ -20,11 +20,11 @@
         <span class="brand-name">Lunar Cloud HVM</span>
       </a>
 
-      <ul class="nav-links">
-        <li><a href="#features">HVM Virtualization</a></li>
-        <li><a href="#plans">Compute Plans</a></li>
-        <li><a href="#monitor">Cluster Health</a></li>
-        <li><a href="#faq">FAQ</a></li>
+      <ul class="nav-links" id="header-nav-links">
+        <li data-nav-target="features"><a href="#features">HVM Virtualization</a></li>
+        <li data-nav-target="plans"><a href="#plans">Compute Plans</a></li>
+        <li data-nav-target="monitor"><a href="#monitor">Cluster Health</a></li>
+        <li data-nav-target="faq"><a href="#faq">FAQ</a></li>
       </ul>
 
       <div class="nav-actions">
@@ -40,8 +40,11 @@
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero">
+  <!-- Main Homepage Wrapper -->
+  <main id="homepage-view">
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
     <div class="container">
       <div class="hero-pill" id="hero-pill-box">
         <span id="hero-pill-text">🚀 Dedicated HVM Architecture</span>
@@ -294,17 +297,41 @@
     </div>
   </section>
 
+  <!-- Custom Homepage Sections Container -->
+  <div id="custom-sections-container"></div>
+
+  </main> <!-- End #homepage-view -->
+
+  <!-- WordPress-Style Custom Page Container -->
+  <article id="custom-page-container" style="display: none;">
+    <div class="custom-page-card glass">
+      <div class="custom-page-nav">
+        <a href="#" class="btn-back-home" id="page-back-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span>Back to Home</span>
+        </a>
+      </div>
+      <header class="custom-page-header">
+        <h1 id="page-title" class="custom-page-title">Page Title</h1>
+        <div id="page-meta" class="custom-page-meta"></div>
+      </header>
+      <div id="page-content" class="custom-page-body">
+        <!-- Rendered custom page content / HTML -->
+      </div>
+    </div>
+  </article>
+
   <!-- Footer -->
   <footer>
     <div class="container footer-wrap">
       <div class="footer-copy">
         &copy; 2026 <span class="company-name">Lunar Infrastructure Networks</span>. All rights reserved. Powered by <span class="brand-name">Lunar Cloud HVM</span>.
       </div>
-      <div class="footer-links">
+      <div class="footer-links" id="footer-links">
         <a href="https://vps.lunars.indevs.in" class="link-panel">Client Panel</a>
         <a href="https://vps.lunars.indevs.in" class="link-support">Community & Support</a>
-        <a href="#plans">Compute Plans</a>
-        <a href="#features">Virtualization</a>
+        <a href="#plans" data-footer-target="plans">Compute Plans</a>
+        <a href="#features" data-footer-target="features">Virtualization</a>
       </div>
     </div>
   </footer>
