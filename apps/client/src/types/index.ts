@@ -187,7 +187,17 @@ export interface SystemSettings {
   web_show_faq?: string;
   web_pages_json?: string;
   web_custom_sections_json?: string;
+  // Menu & Navigation Manager
+  web_nav_menu_json?: string;
+  web_footer_menu_json?: string;
   [key: string]: string | undefined;
+}
+
+export interface WebMenuItem {
+  id: string;
+  label: string;
+  url: string;
+  openInNewTab?: boolean;
 }
 
 export interface WebCustomPage {

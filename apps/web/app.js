@@ -154,6 +154,9 @@
 
     // 9. WordPress-Style Custom Pages & Routing
     setupWordPressPages(s);
+
+    // 10. Navigation Menus & Links Manager (Header Nav & Footer Menus)
+    renderNavigationMenus(s);
   }
 
   let customPagesMap = {};
@@ -322,6 +325,60 @@
       handleRouter();
     } catch (e) {
       console.error('Failed to parse custom pages', e);
+    }
+  }
+
+  function renderNavigationMenus(s) {
+    const navList = document.getElementById('header-nav-links');
+    const footerLinks = document.getElementById('footer-links');
+
+    // 1. Header Navigation Menu
+    if (navList && s.web_nav_menu_json !== undefined) {
+      try {
+        const navItems = typeof s.web_nav_menu_json === 'string'
+          ? JSON.parse(s.web_nav_menu_json)
+          : s.web_nav_menu_json;
+
+        if (Array.isArray(navItems)) {
+          navList.innerHTML = '';
+          for (const item of navItems) {
+            const li = document.createElement('li');
+            const targetAttr = item.openInNewTab ? 'target="_blank" rel="noopener"' : '';
+            li.innerHTML = `<a href="${item.url}" ${targetAttr}>${item.label}</a>`;
+            navList.appendChild(li);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse web_nav_menu_json', e);
+      }
+    }
+
+    // 2. Footer Menu
+    if (footerLinks && s.web_footer_menu_json !== undefined) {
+      try {
+        const footerItems = typeof s.web_footer_menu_json === 'string'
+          ? JSON.parse(s.web_footer_menu_json)
+          : s.web_footer_menu_json;
+
+        if (Array.isArray(footerItems)) {
+          footerLinks.innerHTML = '';
+          for (const item of footerItems) {
+            let url = item.url;
+            if (item.isPanelLink) url = config.panelUrl;
+            if (item.isSupportLink) url = config.supportUrl;
+            const a = document.createElement('a');
+            a.href = url;
+            if (item.openInNewTab || item.isPanelLink || item.isSupportLink) {
+              a.target = '_blank';
+              a.rel = 'noopener';
+            }
+            a.textContent = item.label;
+            footerLinks.appendChild(a);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse web_footer_menu_json', e);
+      }
     }
   }
 
