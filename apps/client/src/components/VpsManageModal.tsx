@@ -8,6 +8,7 @@ import {
   RefreshCw, 
   Terminal as TermIcon, 
   Monitor, 
+  Keyboard,
   Copy, 
   Check, 
   Power, 

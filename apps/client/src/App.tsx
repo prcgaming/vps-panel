@@ -17,6 +17,7 @@ import { CreateVpsModal } from './components/CreateVpsModal';
 import { AddNodeModal } from './components/AddNodeModal';
 import { VpsManageModal } from './components/VpsManageModal';
 import { VpsInstance } from './types';
+import { api } from './api/client';
 
 export const App: React.FC = () => {
   const { user, isLoading } = useAuth();
