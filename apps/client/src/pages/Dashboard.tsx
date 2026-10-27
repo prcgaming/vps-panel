@@ -52,23 +52,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManag
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       
       {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900/90 via-[#0e1424]/90 to-slate-900/90 border border-white/[0.08] p-6 rounded-3xl shadow-xl backdrop-blur-xl relative overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-card-rich p-7 rounded-3xl relative overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold tracking-widest uppercase text-cyan-400 bg-cyan-500/10 border border-cyan-500/25 px-2.5 py-0.5 rounded-full">
-              Enterprise Client Console
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-black tracking-widest uppercase text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-3 py-0.5 rounded-full shadow-sm flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>Enterprise Client Console</span>
             </span>
-            <span className="text-xs text-slate-400 font-mono">Tier: High-Availability</span>
+            <span className="text-xs text-slate-400 font-mono">Tier: High-Availability Dedicated HVM</span>
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Cloud Infrastructure Overview</h2>
-          <p className="text-xs text-slate-300 mt-1 max-w-2xl">
-            Real-time telemetry, dedicated HVM hardware virtualization, memory allocation, and client virtual private servers.
+          <h2 className="text-3xl font-black text-white tracking-tight shimmer-text">Cloud Infrastructure Overview</h2>
+          <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+            Real-time telemetry, dedicated HVM hardware virtualization, live memory allocation, and client virtual private servers.
           </p>
         </div>
-        <div className="flex items-center gap-3 relative z-10 self-start md:self-auto">
+        <div className="flex items-center gap-3 relative z-10 self-start md:self-auto shrink-0">
           <button
             onClick={onOpenCreateVps}
-            className={`px-5 py-2.5 ${currentTheme.btnPrimary} text-white text-xs font-bold rounded-xl transition shadow-lg hover:shadow-cyan-500/25 flex items-center gap-2`}
+            className={`px-5 py-2.5 ${currentTheme.btnPrimary} text-white text-xs font-extrabold rounded-xl transition-all duration-200 shadow-xl hover:shadow-cyan-500/30 hover:scale-[1.02] active:scale-[0.98] border border-white/20 flex items-center gap-2`}
           >
             <span>+ Deploy Cloud VPS</span>
           </button>
@@ -81,44 +83,50 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManag
         {/* Nodes Card */}
         <div 
           onClick={() => onNavigateTab('nodes')}
-          className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] hover:border-cyan-500/40 rounded-2xl cursor-pointer transition-all duration-300 group shadow-lg hover:-translate-y-0.5 backdrop-blur-xl"
+          className="p-5 glass-card-rich rounded-2xl cursor-pointer group hover:-translate-y-1 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compute Nodes</span>
-            <div className="p-2.5 bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 rounded-xl group-hover:scale-110 transition shadow-sm">
+            <div className="p-2.5 bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 rounded-xl group-hover:scale-110 transition shadow-[0_0_15px_-3px_rgba(6,182,212,0.4)]">
               <Server className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-white tracking-tight">{stats?.nodes.total || 0}</span>
-            <span className="text-xs text-emerald-400 font-semibold">({stats?.nodes.online || 0} active)</span>
+            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{stats?.nodes.online || 0} active</span>
+            </span>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Distributed hypervisor cores</p>
+          <p className="text-xs text-slate-400 mt-2 font-medium">Distributed hypervisor cores</p>
         </div>
 
         {/* VPS Instances Card */}
         <div 
           onClick={() => onNavigateTab('vps')}
-          className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] hover:border-blue-500/40 rounded-2xl cursor-pointer transition-all duration-300 group shadow-lg hover:-translate-y-0.5 backdrop-blur-xl"
+          className="p-5 glass-card-rich rounded-2xl cursor-pointer group hover:-translate-y-1 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Virtual Servers</span>
-            <div className="p-2.5 bg-blue-500/15 border border-blue-500/30 text-blue-400 rounded-xl group-hover:scale-110 transition shadow-sm">
+            <div className="p-2.5 bg-blue-500/15 border border-blue-500/30 text-blue-400 rounded-xl group-hover:scale-110 transition shadow-[0_0_15px_-3px_rgba(59,130,246,0.4)]">
               <Layers className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-white tracking-tight">{stats?.vps.total || 0}</span>
-            <span className="text-xs text-emerald-400 font-semibold">({stats?.vps.running || 0} running)</span>
+            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{stats?.vps.running || 0} running</span>
+            </span>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Active client instances</p>
+          <p className="text-xs text-slate-400 mt-2 font-medium">Active client instances</p>
         </div>
 
         {/* Allocated RAM */}
-        <div className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] rounded-2xl shadow-lg backdrop-blur-xl">
+        <div className="p-5 glass-card-rich rounded-2xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Memory Allocation</span>
-            <div className="p-2.5 bg-purple-500/15 border border-purple-500/30 text-purple-400 rounded-xl shadow-sm">
+            <div className="p-2.5 bg-purple-500/15 border border-purple-500/30 text-purple-400 rounded-xl shadow-[0_0_15px_-3px_rgba(168,85,247,0.4)]">
               <Activity className="w-4 h-4" />
             </div>
           </div>
@@ -128,19 +136,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManag
             </span>
             <span className="text-xs text-slate-400 font-mono">/ {(stats?.resources.ram.totalMb || 0) / 1024} GB</span>
           </div>
-          <div className="w-full bg-slate-800/80 h-2 rounded-full mt-3 overflow-hidden ring-1 ring-white/[0.05]">
+          <div className="w-full bg-slate-950/80 h-2 rounded-full mt-3 overflow-hidden ring-1 ring-white/[0.08]">
             <div 
-              className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-sm"
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
               style={{ width: `${stats?.resources.ram.percent || 0}%` }}
             />
           </div>
         </div>
 
         {/* Allocated Cores */}
-        <div className="p-5 bg-gradient-to-b from-slate-900/90 to-[#0c101d]/90 border border-white/[0.08] rounded-2xl shadow-lg backdrop-blur-xl">
+        <div className="p-5 glass-card-rich rounded-2xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">vCPU Allocation</span>
-            <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-xl shadow-sm">
+            <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-xl shadow-[0_0_15px_-3px_rgba(245,158,11,0.4)]">
               <Cpu className="w-4 h-4" />
             </div>
           </div>
@@ -150,9 +158,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManag
             </span>
             <span className="text-xs text-slate-400 font-mono">/ {stats?.resources.cpu.total || 0} vCPUs</span>
           </div>
-          <div className="w-full bg-slate-800/80 h-2 rounded-full mt-3 overflow-hidden ring-1 ring-white/[0.05]">
+          <div className="w-full bg-slate-950/80 h-2 rounded-full mt-3 overflow-hidden ring-1 ring-white/[0.08]">
             <div 
-              className="bg-gradient-to-r from-amber-500 to-yellow-500 h-full rounded-full transition-all duration-500 shadow-sm"
+              className="bg-gradient-to-r from-amber-500 to-yellow-500 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
               style={{ width: `${stats?.resources.cpu.percent || 0}%` }}
             />
           </div>
@@ -178,33 +186,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManag
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {nodes.map((node) => (
-            <div key={node.id} className="p-5 bg-[#0e1424] border border-slate-800 rounded-2xl space-y-4">
+            <div key={node.id} className="p-5 glass-card-rich rounded-2xl space-y-4 group">
               <div className="flex items-start justify-between">
                 <div>
-                  <h4 className="font-semibold text-slate-200 text-sm">{node.name}</h4>
-                  <div className="text-xs font-mono text-slate-400 mt-0.5">{node.ip_address}</div>
+                  <h4 className="font-bold text-white text-sm group-hover:text-cyan-300 transition">{node.name}</h4>
+                  <div className="text-xs font-mono text-cyan-400/80 mt-0.5">{node.ip_address}</div>
                 </div>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                   node.status === 'online'
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${node.status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
                   {node.status}
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center text-xs py-2 bg-slate-900/60 rounded-xl border border-slate-800/80">
+              <div className="grid grid-cols-3 gap-2 text-center text-xs py-2 bg-slate-950/60 rounded-xl border border-white/[0.06]">
                 <div>
-                  <div className="text-slate-400 text-[10px]">DRIVER</div>
+                  <div className="text-slate-400 text-[10px] font-bold tracking-wider">DRIVER</div>
                   <div className="font-mono text-slate-200 uppercase font-semibold mt-0.5">{node.driver}</div>
                 </div>
                 <div>
-                  <div className="text-slate-400 text-[10px]">VPS HOSTED</div>
-                  <div className="font-semibold text-cyan-400 mt-0.5">{node.current_vps_count || node.vps_count}</div>
+                  <div className="text-slate-400 text-[10px] font-bold tracking-wider">VPS HOSTED</div>
+                  <div className="font-bold text-cyan-400 mt-0.5">{node.current_vps_count || node.vps_count}</div>
                 </div>
                 <div>
-                  <div className="text-slate-400 text-[10px]">TOTAL RAM</div>
+                  <div className="text-slate-400 text-[10px] font-bold tracking-wider">TOTAL RAM</div>
                   <div className="font-semibold text-slate-200 mt-0.5">{Math.round(node.ram_total / 1024)} GB</div>
                 </div>
               </div>
@@ -229,10 +237,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManag
           </button>
         </div>
 
-        <div className="bg-[#0e1424] border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="glass-card-rich rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-900/80 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <thead className="bg-slate-950/80 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/[0.08]">
                 <tr>
                   <th className="py-3.5 px-6">VPS Name / Hostname</th>
                   <th className="py-3.5 px-4">Status</th>
@@ -242,7 +250,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenConsole, onOpenManag
                   <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80">
+              <tbody className="divide-y divide-white/[0.05]">
                 {vpsList.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-slate-500">

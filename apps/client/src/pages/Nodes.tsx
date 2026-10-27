@@ -51,7 +51,7 @@ export const NodesPage: React.FC<NodesPageProps> = ({ onOpenAddNode }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100 tracking-tight">Worker Nodes & Hypervisors</h2>
+          <h2 className="text-2xl font-black text-white tracking-tight shimmer-text">Worker Nodes & Hypervisors</h2>
           <p className="text-sm text-slate-400 mt-1">
             Manage your distributed cluster of virtualization servers running Docker or KVM
           </p>
@@ -66,7 +66,7 @@ export const NodesPage: React.FC<NodesPageProps> = ({ onOpenAddNode }) => {
           </button>
           <button
             onClick={onOpenAddNode}
-            className={`flex items-center gap-2 px-4 py-2 ${currentTheme.btnPrimary} text-white text-xs font-semibold rounded-xl transition`}
+            className={`flex items-center gap-2 px-5 py-2.5 ${currentTheme.btnPrimary} text-white text-xs font-bold rounded-xl transition shadow-lg hover:scale-[1.02] active:scale-[0.98] border border-white/20`}
           >
             <Plus className="w-4 h-4" />
             <span>Connect New Node</span>
@@ -82,7 +82,7 @@ export const NodesPage: React.FC<NodesPageProps> = ({ onOpenAddNode }) => {
           const ramPercent = ramTotalGb ? Math.round((allocatedRamGb / ramTotalGb) * 100) : 0;
 
           return (
-            <div key={node.id} className="p-6 bg-[#0e1424] border border-slate-800 rounded-2xl space-y-5 shadow-sm">
+            <div key={node.id} className="p-6 glass-card-rich rounded-2xl space-y-5">
               
               {/* Card Header */}
               <div className="flex items-start justify-between">

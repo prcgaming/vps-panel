@@ -157,7 +157,8 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <div className="absolute top-0 right-1/4 w-[600px] h-[300px] bg-cyan-500/[0.04] rounded-full blur-3xl pointer-events-none" />
         {/* Navbar */}
         <Navbar
           onOpenCreateVps={() => setShowCreateVps(true)}

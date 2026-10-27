@@ -74,12 +74,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className={`w-64 border-r flex flex-col justify-between flex-shrink-0 select-none transition-colors duration-200 ${currentTheme.sidebarStyle}`}>
       <div>
         {/* Brand Header */}
-        <div className="h-16 flex items-center px-6 border-b border-white/[0.06] gap-3">
+        <div className="h-16 flex items-center px-6 border-b border-white/[0.06] gap-3 bg-white/[0.01]">
           {logoUrl ? (
             <img src={logoUrl} alt="Logo" className="w-9 h-9 rounded-xl object-contain bg-slate-900 border border-slate-700/80 p-1 shadow-md" />
           ) : (
             <div 
-              className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${currentTheme.previewGradient} flex items-center justify-center shadow-lg text-white font-black text-lg relative overflow-hidden`}
+              className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${currentTheme.previewGradient} flex items-center justify-center shadow-lg text-white font-black text-lg relative overflow-hidden group`}
               style={{ boxShadow: `0 8px 24px -4px ${currentTheme.glowColor}` }}
             >
               <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
@@ -90,8 +90,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <h1 className="font-extrabold text-white text-sm leading-tight tracking-tight truncate flex items-center gap-1.5">
               <span>{panelName}</span>
             </h1>
-            <p className={`text-[10px] font-semibold tracking-wider uppercase ${currentTheme.textAccent}`}>
-              {viewMode === 'admin' ? 'Platform Admin Console' : 'Client Cloud Console'}
+            <p className={`text-[9px] font-bold tracking-wider uppercase flex items-center gap-1 mt-0.5 ${currentTheme.textAccent}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${viewMode === 'admin' ? 'bg-purple-400' : 'bg-cyan-400'} animate-pulse`} />
+              <span>{viewMode === 'admin' ? 'Platform Admin' : 'Client Console'}</span>
             </p>
           </div>
         </div>
@@ -117,15 +118,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Navigation Section */}
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-5">
           
           {viewMode === 'client' ? (
             /* CLIENT VIEW NAV */
             <div>
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Cloud Compute
+              <div className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center justify-between">
+                <span>Cloud Compute</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/40" />
               </div>
-              <div className="space-y-0.5 mt-1">
+              <div className="space-y-1 mt-1.5">
                 {clientServices.map((item) => {
                   const Icon = item.icon;
                   const isActive = currentTab === item.id;
@@ -133,18 +135,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={item.id}
                       onClick={() => setCurrentTab(item.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                      className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 group ${
                         isActive
-                          ? `${currentTheme.navActive} shadow-sm font-bold`
+                          ? 'bg-gradient-to-r from-cyan-500/20 via-cyan-500/10 to-transparent text-white font-bold border-l-2 border-cyan-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
                           : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className={`w-4 h-4 ${isActive ? currentTheme.textAccent : 'text-slate-400'}`} />
+                        <Icon className={`w-4 h-4 transition ${isActive ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]' : 'text-slate-500 group-hover:text-slate-300'}`} />
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800/80 text-cyan-300 border border-slate-700/60">
+                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition ${
+                          isActive 
+                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' 
+                            : 'bg-slate-900 text-slate-400 border-slate-800'
+                        }`}>
                           {item.badge}
                         </span>
                       )}
@@ -158,10 +164,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <>
               {/* Infrastructure */}
               <div>
-                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Cluster Infrastructure
+                <div className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center justify-between">
+                  <span>Cluster Infrastructure</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400/40" />
                 </div>
-                <div className="space-y-0.5 mt-1">
+                <div className="space-y-1 mt-1.5">
                   {adminInfrastructure.map((item) => {
                     const Icon = item.icon;
                     const isActive = currentTab === item.id;
@@ -169,18 +176,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         key={item.id}
                         onClick={() => setCurrentTab(item.id)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                        className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 group ${
                           isActive
-                            ? `${currentTheme.navActive} shadow-sm font-bold`
+                            ? 'bg-gradient-to-r from-purple-500/20 via-purple-500/10 to-transparent text-white font-bold border-l-2 border-purple-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
                             : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <Icon className={`w-4 h-4 ${isActive ? currentTheme.textAccent : 'text-slate-400'}`} />
+                          <Icon className={`w-4 h-4 transition ${isActive ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'text-slate-500 group-hover:text-slate-300'}`} />
                           <span>{item.label}</span>
                         </div>
                         {item.badge && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700/60">
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition ${
+                            isActive 
+                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' 
+                              : 'bg-slate-900 text-slate-400 border-slate-800'
+                          }`}>
                             {item.badge}
                           </span>
                         )}
@@ -192,10 +203,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {/* Compute Services */}
               <div>
-                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Compute & Cloud
+                <div className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center justify-between">
+                  <span>Compute & Cloud</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/40" />
                 </div>
-                <div className="space-y-0.5 mt-1">
+                <div className="space-y-1 mt-1.5">
                   {adminCompute.map((item) => {
                     const Icon = item.icon;
                     const isActive = currentTab === item.id;
@@ -203,18 +215,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         key={item.id}
                         onClick={() => setCurrentTab(item.id)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                        className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 group ${
                           isActive
-                            ? `${currentTheme.navActive} shadow-sm font-bold`
+                            ? 'bg-gradient-to-r from-cyan-500/20 via-cyan-500/10 to-transparent text-white font-bold border-l-2 border-cyan-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
                             : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <Icon className={`w-4 h-4 ${isActive ? currentTheme.textAccent : 'text-slate-400'}`} />
+                          <Icon className={`w-4 h-4 transition ${isActive ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]' : 'text-slate-500 group-hover:text-slate-300'}`} />
                           <span>{item.label}</span>
                         </div>
                         {item.badge && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800/80 text-cyan-300 border border-slate-700/60">
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition ${
+                            isActive 
+                              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' 
+                              : 'bg-slate-900 text-slate-400 border-slate-800'
+                          }`}>
                             {item.badge}
                           </span>
                         )}
@@ -226,10 +242,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {/* Management */}
               <div>
-                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Platform Administration
+                <div className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center justify-between">
+                  <span>Platform Administration</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/40" />
                 </div>
-                <div className="space-y-0.5 mt-1">
+                <div className="space-y-1 mt-1.5">
                   {adminManagement.map((item) => {
                     const Icon = item.icon;
                     const isActive = currentTab === item.id;
@@ -237,18 +254,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         key={item.id}
                         onClick={() => setCurrentTab(item.id)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                        className={`w-full relative flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 group ${
                           isActive
-                            ? `${currentTheme.navActive} shadow-sm font-bold`
+                            ? 'bg-gradient-to-r from-purple-500/20 via-purple-500/10 to-transparent text-white font-bold border-l-2 border-purple-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
                             : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <Icon className={`w-4 h-4 ${isActive ? currentTheme.textAccent : 'text-slate-400'}`} />
+                          <Icon className={`w-4 h-4 transition ${isActive ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'text-slate-500 group-hover:text-slate-300'}`} />
                           <span>{item.label}</span>
                         </div>
                         {item.badge && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition ${
+                            isActive 
+                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' 
+                              : 'bg-slate-900 text-slate-400 border-slate-800'
+                          }`}>
                             {item.badge}
                           </span>
                         )}

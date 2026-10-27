@@ -83,34 +83,36 @@ export const Login: React.FC = () => {
         {/* Brand Header */}
         <div className="text-center mb-6">
           <div 
-            className={`inline-flex relative items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr ${currentTheme.previewGradient} shadow-2xl text-white mb-4 p-0.5`}
-            style={{ boxShadow: `0 12px 30px -4px ${currentTheme.glowColor}` }}
+            className={`inline-flex relative items-center justify-center w-18 h-18 rounded-3xl bg-gradient-to-tr ${currentTheme.previewGradient} shadow-2xl text-white mb-4 p-0.5 group`}
+            style={{ boxShadow: `0 16px 36px -4px ${currentTheme.glowColor}` }}
           >
-            <div className="w-full h-full bg-[#070a12]/80 backdrop-blur-md rounded-2xl flex items-center justify-center">
-              <Orbit className={`w-8 h-8 ${currentTheme.textAccent} animate-[spin_12s_linear_infinite]`} />
+            <div className="w-16 h-16 bg-[#070a14]/90 backdrop-blur-xl rounded-[22px] flex items-center justify-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
+              <Orbit className={`w-8 h-8 ${currentTheme.textAccent} animate-[spin_12s_linear_infinite] drop-shadow-[0_0_12px_rgba(6,182,212,0.6)]`} />
             </div>
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight flex items-center justify-center gap-2">
-            {panelName}
-            <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full ${currentTheme.bgBadge} font-bold`}>
+            <span className="shimmer-text">{panelName}</span>
+            <span className={`text-[10px] uppercase font-mono px-2.5 py-0.5 rounded-full ${currentTheme.bgBadge} font-extrabold shadow-sm`}>
               Client Console
             </span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">Client Cloud Management & Virtualization Portal</p>
+          <p className="text-xs text-slate-400 mt-1.5 font-medium">Next-Generation High-Performance Virtualization & Compute Portal</p>
         </div>
 
         {/* Card */}
-        <div className="bg-[#0b101d]/95 border border-white/[0.08] rounded-3xl p-8 shadow-2xl backdrop-blur-2xl ring-1 ring-white/[0.05]">
+        <div className="glass-card-rich rounded-3xl p-8 backdrop-blur-3xl ring-1 ring-white/[0.08] relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
           
           {/* Tab Switcher: Sign In vs Sign Up */}
-          <div className="flex bg-slate-900/90 p-1 rounded-2xl mb-6 border border-white/[0.06]">
+          <div className="flex bg-slate-950/80 p-1 rounded-2xl mb-6 border border-white/[0.08] shadow-inner relative z-10">
             <button
               type="button"
               onClick={() => { setIsRegister(false); setError(''); }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition duration-200 ${
                 !isRegister 
-                  ? `${currentTheme.btnPrimary}` 
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? `${currentTheme.btnPrimary} shadow-md` 
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Client Login
@@ -125,10 +127,10 @@ export const Login: React.FC = () => {
                 setIsRegister(true);
                 setError('');
               }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition duration-200 ${
                 isRegister 
-                  ? `${currentTheme.btnPrimary}` 
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? `${currentTheme.btnPrimary} shadow-md` 
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Create Account
@@ -136,16 +138,17 @@ export const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/25 rounded-xl text-rose-300 text-xs font-medium">
-              {error}
+            <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs font-medium flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
             {/* Name Field (Sign Up Only) */}
             {isRegister && (
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                <label className="block text-[10px] font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
                   Full Name
                 </label>
                 <div className="relative">
@@ -156,14 +159,14 @@ export const Login: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
-                    className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none ${currentTheme.ringFocus} transition`}
+                    className={`w-full pl-10 pr-4 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-slate-100 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition shadow-inner`}
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              <label className="block text-[10px] font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
                 Email Address
               </label>
               <div className="relative">
@@ -174,13 +177,13 @@ export const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none ${currentTheme.ringFocus} transition`}
+                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-slate-100 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition shadow-inner`}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              <label className="block text-[10px] font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
                 Password
               </label>
               <div className="relative">
@@ -192,7 +195,7 @@ export const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none ${currentTheme.ringFocus} transition`}
+                  className={`w-full pl-10 pr-4 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-slate-100 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition shadow-inner`}
                 />
               </div>
             </div>
@@ -200,7 +203,7 @@ export const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full mt-2 py-3 ${currentTheme.btnPrimary} font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer shadow-lg`}
+              className={`w-full mt-2 py-3 ${currentTheme.btnPrimary} font-bold rounded-xl transition duration-200 flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer shadow-xl hover:shadow-cyan-500/30 hover:scale-[1.01]`}
             >
               <span>{loading ? (isRegister ? 'Creating Client Account...' : 'Authenticating...') : (isRegister ? 'Create Client Account' : 'Sign In to Client Console')}</span>
               <ArrowRight className="w-4 h-4" />

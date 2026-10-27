@@ -169,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <button
           onClick={onOpenCreateVps}
-          className={`flex items-center gap-2 px-4 py-2 text-white text-xs font-bold rounded-xl transition shadow-lg ${currentTheme.btnPrimary}`}
+          className={`flex items-center gap-2 px-4 py-2 text-white text-xs font-extrabold rounded-xl transition-all duration-200 shadow-lg ${currentTheme.btnPrimary} hover:scale-[1.03] active:scale-[0.98] border border-white/20 hover:shadow-cyan-500/30`}
         >
           <Plus className="w-4 h-4" />
           <span>Deploy Cloud VPS</span>

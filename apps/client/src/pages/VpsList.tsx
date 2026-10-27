@@ -84,14 +84,14 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenM
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100 tracking-tight">Virtual Private Servers</h2>
+          <h2 className="text-2xl font-black text-white tracking-tight shimmer-text">Virtual Private Servers</h2>
           <p className="text-sm text-slate-400 mt-1">
             Manage provisioned virtual machines across your multi-node hypervisor cluster
           </p>
         </div>
         <button
           onClick={onOpenCreateVps}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-500/20 transition self-start md:self-auto"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition self-start md:self-auto border border-white/20"
         >
           <Plus className="w-4 h-4" />
           <span>Deploy Virtual Server</span>
@@ -99,7 +99,7 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenM
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0e1424] border border-slate-800 p-3.5 rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 glass-card-rich p-3.5 rounded-2xl">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-2.5" />
           <input
@@ -107,7 +107,7 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenM
             placeholder="Search VPS name, hostname, IP..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-1.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-200 text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            className="w-full pl-10 pr-4 py-1.5 bg-slate-950 border border-slate-700/80 rounded-xl text-slate-200 text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-500"
           />
         </div>
 
@@ -116,9 +116,9 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenM
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium capitalize transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition ${
                 filterStatus === st
-                  ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -136,10 +136,10 @@ export const VpsListPage: React.FC<VpsListPageProps> = ({ onOpenConsole, onOpenM
       </div>
 
       {/* VPS Table */}
-      <div className="bg-[#0e1424] border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+      <div className="glass-card-rich rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900/80 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-950/80 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/[0.08]">
               <tr>
                 <th className="py-3.5 px-6">Virtual Server</th>
                 <th className="py-3.5 px-4">Status</th>
