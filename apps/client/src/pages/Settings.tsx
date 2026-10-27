@@ -116,6 +116,7 @@ export const Settings: React.FC<SettingsProps> = () => {
     web_bg_overlay_opacity: '0.85',
     // Free Tier Client Limits
     client_free_tier_enabled: '1',
+    auto_provision_vps_on_register: '1',
     free_tier_max_cpu: '1',
     free_tier_max_ram_mb: '1024',
     free_tier_max_disk_gb: '20',
@@ -939,6 +940,27 @@ export const Settings: React.FC<SettingsProps> = () => {
               type="checkbox"
               checked={settings.client_free_tier_enabled !== '0'}
               onChange={(e) => setSettings({ ...settings, client_free_tier_enabled: e.target.checked ? '1' : '0' })}
+              className="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-500"
+            />
+          </label>
+
+          {/* Auto-Deploy Free VPS on Account Registration */}
+          <label className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/80 border border-white/[0.08] cursor-pointer hover:border-cyan-500/30 transition">
+            <div>
+              <div className="text-sm font-bold text-white flex items-center gap-2">
+                <span>Auto-Deploy Free VPS on Account Registration</span>
+                <span className="px-2 py-0.5 text-[10px] rounded bg-cyan-500/10 text-cyan-300 font-mono">
+                  {settings.auto_provision_vps_on_register === '1' || settings.auto_provision_vps_on_register === 'true' ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                Automatically create and assign a starter Free Tier VPS for any new user as soon as they make an account.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.auto_provision_vps_on_register === '1' || settings.auto_provision_vps_on_register === 'true'}
+              onChange={(e) => setSettings({ ...settings, auto_provision_vps_on_register: e.target.checked ? '1' : '0' })}
               className="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-500"
             />
           </label>

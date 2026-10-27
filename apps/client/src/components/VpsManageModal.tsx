@@ -37,10 +37,12 @@ import {
   RotateCw,
   Sparkles,
   Layers,
-  Share2
+  Share2,
+  UserCheck
 } from 'lucide-react';
 import { VpsInstance } from '../types';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 interface VpsManageModalProps {
@@ -111,6 +113,37 @@ export const VpsManageModal: React.FC<VpsManageModalProps> = ({ vps, onClose, on
   // Rebuild state
   const [selectedRebuildOs, setSelectedRebuildOs] = useState('ubuntu:24.04');
   const [rebuilding, setRebuilding] = useState(false);
+
+  // Transfer Ownership State
+  const { user } = useAuth();
+  const [transferUsers, setTransferUsers] = useState<Array<{ id: string; name: string; email: string; role: string }>>([]);
+  const [selectedTransferUserId, setSelectedTransferUserId] = useState<string>('');
+  const [transferring, setTransferring] = useState(false);
+  const [transferSuccess, setTransferSuccess] = useState('');
+
+  useEffect(() => {
+    if (activeTab === 'settings' && user?.role === 'admin' && transferUsers.length === 0) {
+      api.getUsers().then(res => setTransferUsers(res.users || [])).catch(console.error);
+    }
+  }, [activeTab, user]);
+
+  const handleTransferOwnership = async () => {
+    if (!selectedTransferUserId) {
+      alert('Please select a registered user account to transfer this VPS to');
+      return;
+    }
+    setTransferring(true);
+    try {
+      const res = await api.transferVpsOwner(vps.id, selectedTransferUserId);
+      setTransferSuccess(res.message || 'VPS ownership transferred successfully!');
+      if (onRefresh) onRefresh();
+      setTimeout(() => setTransferSuccess(''), 5000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to transfer VPS ownership');
+    } finally {
+      setTransferring(false);
+    }
+  };
 
   const vncPort = vps.vnc_port || 5900;
   const nodeHost = vps.node_ip || window.location.hostname;
@@ -1114,6 +1147,48 @@ export const VpsManageModal: React.FC<VpsManageModalProps> = ({ vps, onClose, on
           {activeTab === 'settings' && (
             <div className="space-y-6 max-w-4xl mx-auto">
               
+              {/* Transfer VPS Ownership / Give VPS to Client Account (Admin Only) */}
+              {user?.role === 'admin' && (
+                <div className="bg-[#0b1020] border border-cyan-500/20 rounded-3xl p-6 shadow-xl space-y-4">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-cyan-400" />
+                    <h4 className="text-sm font-extrabold text-white">Transfer VPS Ownership / Give to User Account</h4>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Reassign this VPS to any client who created an account. The server will immediately appear in their client portal with full control.
+                  </p>
+
+                  {transferSuccess && (
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-semibold">
+                      {transferSuccess}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                    <select
+                      value={selectedTransferUserId}
+                      onChange={(e) => setSelectedTransferUserId(e.target.value)}
+                      className="w-full sm:w-80 px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                    >
+                      <option value="">Select Target Client Account...</option>
+                      {transferUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} — {u.email} ({u.role})
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={handleTransferOwnership}
+                      disabled={transferring || !selectedTransferUserId}
+                      className="w-full sm:w-auto px-5 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-600/20 transition whitespace-nowrap"
+                    >
+                      {transferring ? 'Transferring...' : 'Transfer VPS Ownership'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* OS Reinstall / Rebuild Card */}
               <div className="bg-[#0b1020] border border-white/[0.08] rounded-3xl p-6 shadow-xl space-y-4">
                 <div className="flex items-center gap-2">

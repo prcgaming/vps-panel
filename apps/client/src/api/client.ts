@@ -63,6 +63,7 @@ export const api = {
   deleteVpsFile: (id: string, path: string) => apiRequest(`/vps/${id}/files?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
   generateSshKey: (id: string) => apiRequest(`/vps/${id}/ssh-maker`, { method: 'POST' }),
   resetVpsPassword: (id: string, password?: string) => apiRequest(`/vps/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) }),
+  transferVpsOwner: (id: string, userId: string) => apiRequest(`/vps/${id}/owner`, { method: 'PUT', body: JSON.stringify({ user_id: userId }) }),
 
   // IPAM
   getIpam: () => apiRequest('/ipam'),

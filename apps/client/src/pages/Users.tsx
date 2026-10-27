@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Users as UsersIcon, Plus, Shield, User as UserIcon } from 'lucide-react';
+import { Users as UsersIcon, Plus, Shield, User as UserIcon, Server } from 'lucide-react';
 import { api } from '../api/client';
 import { User } from '../types';
+import { CreateVpsModal } from '../components/CreateVpsModal';
 
 export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [vpsModalUser, setVpsModalUser] = useState<User | null>(null);
 
   // Form
   const [name, setName] = useState('');
@@ -66,7 +68,8 @@ export const UsersPage: React.FC = () => {
             <tr>
               <th className="py-3.5 px-6">Name & Email</th>
               <th className="py-3.5 px-4">Role</th>
-              <th className="py-3.5 px-6 text-right">Created Date</th>
+              <th className="py-3.5 px-6">Created Date</th>
+              <th className="py-3.5 px-6 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/80">
@@ -90,8 +93,18 @@ export const UsersPage: React.FC = () => {
                     {u.role}
                   </span>
                 </td>
-                <td className="py-4 px-6 text-right text-xs text-slate-400">
+                <td className="py-4 px-6 text-xs text-slate-400">
                   {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                </td>
+                <td className="py-4 px-6 text-right">
+                  <button
+                    onClick={() => setVpsModalUser(u)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-xl text-xs font-semibold transition"
+                    title={`Deploy and give a VPS to ${u.name}`}
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    <span>Give VPS</span>
+                  </button>
                 </td>
               </tr>
             ))}
@@ -165,6 +178,18 @@ export const UsersPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Give VPS to User Modal */}
+      {vpsModalUser && (
+        <CreateVpsModal
+          initialUserId={vpsModalUser.id}
+          onClose={() => setVpsModalUser(null)}
+          onCreated={() => {
+            setVpsModalUser(null);
+            fetchUsers();
+          }}
+        />
       )}
 
     </div>

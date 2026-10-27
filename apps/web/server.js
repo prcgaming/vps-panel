@@ -37,23 +37,56 @@ const server = http.createServer((req, res) => {
   let reqPath = req.url.split('?')[0];
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
 
-  // Direct settings API endpoint for public portal
-  if (reqPath === '/api/settings') {
-    const candidateSettings = [
-      path.join(__dirname, 'settings.json'),
-      '/var/www/vps-panel-web/settings.json',
-      '/opt/vps-panel/apps/web/settings.json',
-      path.resolve(__dirname, '../server/data/settings.json')
-    ];
-    for (const p of candidateSettings) {
-      if (fs.existsSync(p)) {
-        try {
-          const raw = fs.readFileSync(p, 'utf8');
-          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-          res.end(raw);
-          return;
-        } catch {}
-      }
+  // Proxy all /api/ requests directly to the VPS Panel backend API
+  if (reqPath.startsWith('/api/')) {
+    const apiTarget = process.env.API_TARGET || 'http://127.0.0.1:4000';
+    try {
+      const targetUrl = new URL(req.url, apiTarget);
+      const proxyReq = http.request(
+        targetUrl,
+        {
+          method: req.method,
+          headers: {
+            ...req.headers,
+            host: targetUrl.host,
+            'x-forwarded-for': req.socket.remoteAddress || '127.0.0.1',
+            'x-forwarded-proto': 'http'
+          }
+        },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+          proxyRes.pipe(res);
+        }
+      );
+
+      proxyReq.on('error', (err) => {
+        // Fallback for /api/settings if backend is temporarily restarting
+        if (reqPath === '/api/settings') {
+          const candidateSettings = [
+            path.join(__dirname, 'settings.json'),
+            '/var/www/vps-panel-web/settings.json',
+            '/opt/vps-panel/apps/web/settings.json',
+            path.resolve(__dirname, '../server/data/settings.json')
+          ];
+          for (const p of candidateSettings) {
+            if (fs.existsSync(p)) {
+              try {
+                const raw = fs.readFileSync(p, 'utf8');
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(raw);
+                return;
+              } catch {}
+            }
+          }
+        }
+        res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: 'Backend API connection failed', details: err.message }));
+      });
+
+      req.pipe(proxyReq);
+      return;
+    } catch (e) {
+      // Fall through if URL parsing fails
     }
   }
 

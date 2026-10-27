@@ -46,9 +46,18 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     ram_mb = 1024,
     disk_gb = 20,
     node_id, // optional: if not supplied, auto-scheduler chooses least loaded node
+    user_id: requestedUserId, // Allow administrators to give/assign this VPS to any user who made an account!
     root_password,
     ssh_key
   } = req.body;
+
+  let ownerUserId = user.id;
+  if (user.role === 'admin' && requestedUserId) {
+    const targetUser = db.prepare('SELECT id FROM users WHERE id = ?').get(requestedUserId) as any;
+    if (targetUser) {
+      ownerUserId = targetUser.id;
+    }
+  }
 
   // Auto-detect OS Type (Windows, Desktop GUI, Custom ISO, or Linux)
   let os_type = rawOsType || 'linux';
@@ -186,7 +195,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       iso_url, vnc_port, vnc_password, cpu_cores, ram_mb, disk_gb, ip_address, gateway, netmask, root_password, ssh_key
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    vpsId, name, hostname, targetNodeId, user.id, 'creating', virt_type, os_type, os_image,
+    vpsId, name, hostname, targetNodeId, ownerUserId, 'creating', virt_type, os_type, os_image,
     iso_url || '', vncPort, vncPassword, cpu_cores, ram_mb, disk_gb, assignedIp, assignedGateway, assignedNetmask, password, ssh_key || ''
   );
 
@@ -199,7 +208,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
   db.prepare(`
     INSERT INTO activity_logs (id, user_id, action, target_type, target_id, details, ip_address)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created ${virt_type.toUpperCase()} (${os_type}) VPS ${name} (${assignedIp}) on node ${targetNodeId}`, req.ip || '127.0.0.1');
+  `).run(uuidv4(), user.id, 'vps_create', 'vps', vpsId, `Created ${virt_type.toUpperCase()} (${os_type}) VPS ${name} (${assignedIp}) for user ${ownerUserId} on node ${targetNodeId}`, req.ip || '127.0.0.1');
 
   // 3. Dispatch creation to node agent if connected
   try {
@@ -261,6 +270,57 @@ router.get('/:id', authenticate, (req: Request, res: Response) => {
   }
 
   res.json({ vps });
+});
+
+// PUT /api/vps/:id/owner - Transfer / Give VPS to any user who made an account (Admin only)
+router.put('/:id/owner', authenticate, (req: Request, res: Response) => {
+  const user = req.user!;
+  if (user.role !== 'admin') {
+    res.status(403).json({ error: 'Only administrators can reassign or transfer VPS ownership.' });
+    return;
+  }
+
+  const { user_id } = req.body;
+  const vpsId = String(req.params.id);
+
+  if (!user_id) {
+    res.status(400).json({ error: 'Target user_id is required' });
+    return;
+  }
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS instance not found' });
+    return;
+  }
+
+  const targetUser = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(user_id) as any;
+  if (!targetUser) {
+    res.status(404).json({ error: 'Selected user account does not exist' });
+    return;
+  }
+
+  db.prepare('UPDATE vps_instances SET user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(targetUser.id, vpsId);
+
+  // Log activity
+  db.prepare(`
+    INSERT INTO activity_logs (id, user_id, action, target_type, target_id, details, ip_address)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    uuidv4(), 
+    user.id, 
+    'vps_transfer', 
+    'vps', 
+    vpsId, 
+    `Transferred VPS "${vps.name}" (${vps.id}) ownership to client account ${targetUser.name} (${targetUser.email})`, 
+    req.ip || '127.0.0.1'
+  );
+
+  res.json({ 
+    success: true, 
+    message: `VPS "${vps.name}" has been transferred to client ${targetUser.name} (${targetUser.email})`, 
+    user: targetUser 
+  });
 });
 
 // POST /api/vps/:id/action - Perform action (start, stop, restart, reinstall, reset_password, resize)
@@ -691,6 +751,52 @@ router.post('/:id/reset-password', authenticate, async (req: Request, res: Respo
   } catch {}
 
   res.json({ success: true, root_password: newPass });
+});
+
+// PUT /api/vps/:id/owner - Transfer VPS ownership to another registered user (admin only)
+router.put('/:id/owner', authenticate, (req: Request, res: Response) => {
+  const user = req.user!;
+  if (user.role !== 'admin') {
+    res.status(403).json({ error: 'Admin access required to transfer VPS ownership' });
+    return;
+  }
+
+  const vpsId = String(req.params.id);
+  const { user_id: newUserId } = req.body;
+
+  if (!newUserId) {
+    res.status(400).json({ error: 'Target user_id is required' });
+    return;
+  }
+
+  const vps = db.prepare('SELECT * FROM vps_instances WHERE id = ?').get(vpsId) as any;
+  if (!vps) {
+    res.status(404).json({ error: 'VPS instance not found' });
+    return;
+  }
+
+  const targetUser = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(newUserId) as any;
+  if (!targetUser) {
+    res.status(404).json({ error: 'Target user not found' });
+    return;
+  }
+
+  db.prepare('UPDATE vps_instances SET user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(targetUser.id, vps.id);
+
+  try {
+    db.prepare('INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(uuidv4(), user.id, 'vps_transfer_owner', 'vps', vps.id, JSON.stringify({ old_user_id: vps.user_id, new_user_id: targetUser.id, new_user_email: targetUser.email }));
+  } catch {}
+
+  res.json({
+    success: true,
+    message: `VPS "${vps.name}" transferred to user ${targetUser.name} (${targetUser.email})`,
+    owner: {
+      id: targetUser.id,
+      name: targetUser.name,
+      email: targetUser.email
+    }
+  });
 });
 
 export default router;

@@ -92,6 +92,42 @@ router.post('/register', (req: Request, res: Response) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(uuidv4(), id, 'register', `New user registered: ${email}`, req.ip || '127.0.0.1');
 
+  // Auto-provision Free Tier VPS for new user if enabled by administrator
+  try {
+    const autoDeploySetting = db.prepare("SELECT value FROM system_settings WHERE key = 'auto_provision_vps_on_register'").get() as { value: string } | undefined;
+    if (autoDeploySetting && (autoDeploySetting.value === '1' || autoDeploySetting.value === 'true')) {
+      const onlineNode = db.prepare("SELECT id FROM nodes WHERE status = 'online' ORDER BY created_at ASC LIMIT 1").get() as { id: string } | undefined;
+      const anyNode = onlineNode || db.prepare("SELECT id FROM nodes ORDER BY created_at ASC LIMIT 1").get() as { id: string } | undefined;
+      if (anyNode) {
+        const vpsId = `vps-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+        const cleanName = name.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase().substring(0, 12) || 'free';
+        const vpsName = `${cleanName}-vps`;
+        const hostname = `${cleanName}.local`;
+
+        const maxCpuRow = db.prepare("SELECT value FROM system_settings WHERE key = 'free_tier_max_cpu'").get() as { value: string } | undefined;
+        const maxRamRow = db.prepare("SELECT value FROM system_settings WHERE key = 'free_tier_max_ram_mb'").get() as { value: string } | undefined;
+        const maxDiskRow = db.prepare("SELECT value FROM system_settings WHERE key = 'free_tier_max_disk_gb'").get() as { value: string } | undefined;
+
+        const cpu_cores = maxCpuRow ? parseInt(maxCpuRow.value, 10) : 1;
+        const ram_mb = maxRamRow ? parseInt(maxRamRow.value, 10) : 1024;
+        const disk_gb = maxDiskRow ? parseInt(maxDiskRow.value, 10) : 20;
+
+        const ipSubnet = (Math.floor(Math.random() * 200) + 20);
+        const ipLast = (Math.floor(Math.random() * 240) + 10);
+        const ip_address = `10.${ipSubnet}.0.${ipLast}`;
+
+        db.prepare(`
+          INSERT INTO vps_instances (
+            id, node_id, user_id, name, hostname, virt_type, os_type, os_image,
+            cpu_cores, ram_mb, disk_gb, status, ip_address
+          ) VALUES (?, ?, ?, ?, ?, 'lxc', 'linux', 'ubuntu:24.04', ?, ?, ?, 'running', ?)
+        `).run(vpsId, anyNode.id, id, vpsName, hostname, cpu_cores, ram_mb, disk_gb, ip_address);
+      }
+    }
+  } catch (autoErr) {
+    console.error('[AutoProvision] Error creating free VPS on user register:', autoErr);
+  }
+
   res.status(201).json({
     token,
     user: { id, email, name, role: 'user' }

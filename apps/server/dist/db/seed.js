@@ -283,6 +283,7 @@ export function seedDatabase() {
         web_bg_overlay_opacity: '0.85',
         // Client Free Tier Quota Limits
         client_free_tier_enabled: '1',
+        auto_provision_vps_on_register: '1',
         free_tier_max_cpu: '1',
         free_tier_max_ram_mb: '1024',
         free_tier_max_disk_gb: '20',

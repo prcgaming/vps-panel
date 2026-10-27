@@ -8,13 +8,16 @@ import { Node, OsTemplate } from '../types';
 interface CreateVpsModalProps {
   onClose: () => void;
   onCreated: () => void;
+  initialUserId?: string;
 }
 
-export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreated }) => {
+export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreated, initialUserId }) => {
   const { user } = useAuth();
   const { currentTheme } = useTheme();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [templates, setTemplates] = useState<OsTemplate[]>([]);
+  const [allUsers, setAllUsers] = useState<Array<{ id: string; name: string; email: string; role: string }>>([]);
+  const [targetUserId, setTargetUserId] = useState<string>(initialUserId || '');
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,8 +54,13 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
   const [sshKey, setSshKey] = useState('');
 
   useEffect(() => {
-    Promise.all([api.getNodes(), api.getTemplates(), api.getSettings().catch(() => ({}))])
-      .then(([nodesRes, tmplRes, settingsRes]) => {
+    Promise.all([
+      api.getNodes(),
+      api.getTemplates(),
+      api.getSettings().catch(() => ({})),
+      user?.role === 'admin' ? api.getUsers().catch(() => ({})) : Promise.resolve({})
+    ])
+      .then(([nodesRes, tmplRes, settingsRes, usersRes]: any) => {
         setNodes(nodesRes.nodes || []);
         const tmpls: OsTemplate[] = tmplRes.templates || [];
         setTemplates(tmpls);
@@ -60,6 +68,10 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
           const defaultTmpl = tmpls.find(t => t.image_ref === 'ubuntu:24.04') || tmpls[0];
           setSelectedTemplate(defaultTmpl);
           setOsImage(defaultTmpl.image_ref);
+        }
+
+        if (usersRes?.users) {
+          setAllUsers(usersRes.users || []);
         }
 
         if (settingsRes?.settings) {
@@ -75,7 +87,7 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
       })
       .catch(console.error)
       .finally(() => setLoadingData(false));
-  }, []);
+  }, [user]);
 
   const plans = [
     { id: 'starter', name: 'Starter Micro', cpu: 1, ram: 1024, disk: 20, desc: 'Ideal for test apps & bots' },
@@ -156,6 +168,7 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
         hostname: hostname || `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.local`,
         virt_type: effectiveOsType !== 'linux' ? 'hvm' : virtType,
         node_id: nodeId || undefined,
+        user_id: user?.role === 'admin' && targetUserId ? targetUserId : undefined,
         os_image: osImage,
         os_type: effectiveOsType,
         iso_url: customIsoUrl || selectedTemplate?.iso_url || undefined,
@@ -215,6 +228,37 @@ export const CreateVpsModal: React.FC<CreateVpsModalProps> = ({ onClose, onCreat
                   <div className="text-[11px] text-slate-400 mt-0.5">
                     Your account can provision up to: <strong className="text-cyan-300">{freeLimits.maxCpu} vCPU</strong> &bull; <strong className="text-cyan-300">{freeLimits.maxRam >= 1024 ? `${freeLimits.maxRam / 1024} GB` : `${freeLimits.maxRam} MB`} RAM</strong> &bull; <strong className="text-cyan-300">{freeLimits.maxDisk} GB NVMe</strong>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Admin Owner Assignment / Give VPS to Client Account */}
+          {user?.role === 'admin' && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/30 via-slate-900 to-blue-950/30 border border-cyan-500/30 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-cyan-400" />
+                    <span>Assign VPS Ownership / Give to User Account</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Select any client who made an account to assign this VPS directly into their portal.
+                  </p>
+                </div>
+                <div className="w-full sm:w-80">
+                  <select
+                    value={targetUserId}
+                    onChange={(e) => setTargetUserId(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 hover:border-cyan-500/50 rounded-xl text-white font-mono text-xs focus:outline-none focus:border-cyan-500 shadow-inner"
+                  >
+                    <option value="">👤 Self (Administrator Account)</option>
+                    {allUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} — {u.email} ({u.role})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>

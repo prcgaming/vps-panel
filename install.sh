@@ -374,6 +374,8 @@ setup_nginx_web_portal() {
   if [ -d "$INSTALL_DIR/apps/web" ]; then
     cp -r "$INSTALL_DIR/apps/web/"* /var/www/vps-panel-web/ 2>/dev/null || true
   fi
+  chmod -R 755 /var/www/vps-panel-web 2>/dev/null || true
+  chown -R www-data:www-data /var/www/vps-panel-web 2>/dev/null || chown -R nginx:nginx /var/www/vps-panel-web 2>/dev/null || true
 
   # Update config.json with linked panel URL and brand
   cat > /var/www/vps-panel-web/config.json << WEBCONFIGEOF
@@ -436,6 +438,17 @@ server {
     root /var/www/vps-panel-web;
     index index.html;
 
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
     location / {
         try_files \$uri \$uri/ /index.html;
     }
@@ -453,6 +466,17 @@ server {
     ssl_certificate_key /etc/ssl/vps-panel/key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
 
     location / {
         try_files \$uri \$uri/ /index.html;
@@ -518,6 +542,8 @@ start_vps_web_service() {
   if [ -d "$INSTALL_DIR/apps/web" ]; then
     cp -r "$INSTALL_DIR/apps/web/"* /var/www/vps-panel-web/ 2>/dev/null || true
   fi
+  chmod -R 755 /var/www/vps-panel-web 2>/dev/null || true
+  chown -R www-data:www-data /var/www/vps-panel-web 2>/dev/null || chown -R nginx:nginx /var/www/vps-panel-web 2>/dev/null || true
 
   cat > /var/www/vps-panel-web/config.json << WEBCONFIGEOF
 {
@@ -530,6 +556,14 @@ WEBCONFIGEOF
 
   if [ -f "$INSTALL_DIR/apps/web/config.json" ]; then
     cp /var/www/vps-panel-web/config.json "$INSTALL_DIR/apps/web/config.json" 2>/dev/null || true
+  fi
+
+  # Ensure firewall allows public website traffic on WEB_PORT
+  if command -v ufw >/dev/null 2>&1; then
+    ufw allow ${WEB_PORT}/tcp >/dev/null 2>&1 || true
+  elif command -v firewall-cmd >/dev/null 2>&1; then
+    firewall-cmd --permanent --add-port=${WEB_PORT}/tcp >/dev/null 2>&1 || true
+    firewall-cmd --reload >/dev/null 2>&1 || true
   fi
 
   echo -e "\n${YELLOW}[*] Starting Public Website server on port ${BOLD}${WEB_PORT}${NC}..."
@@ -771,8 +805,8 @@ install_panel() {
   echo -e "\n${BOLD}Public Hosting Website / Client Portal:${NC}"
   echo -e "  A modern public-facing cloud hosting landing page (apps/web) with live cluster"
   echo -e "  telemetry, HVM pricing plans, and client login deep-links."
-  read -r -p "Do you also want to install the public hosting website? [y/N]: " INSTALL_WEB_CHOICE
-  INSTALL_WEB_CHOICE=$(echo "${INSTALL_WEB_CHOICE:-n}" | tr '[:upper:]' '[:lower:]')
+  read -r -p "Do you also want to install the public hosting website? [Y/n]: " INSTALL_WEB_CHOICE
+  INSTALL_WEB_CHOICE=$(echo "${INSTALL_WEB_CHOICE:-y}" | tr '[:upper:]' '[:lower:]')
 
   WEB_PORT="3000"
   INSTALL_WEB_DOMAIN=""
@@ -963,11 +997,15 @@ AGENTINITEOF
     ufw allow $NODE_PORT/tcp >/dev/null 2>&1 || true
     ufw allow 80/tcp >/dev/null 2>&1 || true
     ufw allow 443/tcp >/dev/null 2>&1 || true
+    ufw allow $WEB_PORT/tcp >/dev/null 2>&1 || true
+    ufw allow 3000/tcp >/dev/null 2>&1 || true
   elif command -v firewall-cmd >/dev/null 2>&1; then
     firewall-cmd --permanent --add-port=$PANEL_PORT/tcp >/dev/null 2>&1 || true
     firewall-cmd --permanent --add-port=$NODE_PORT/tcp >/dev/null 2>&1 || true
     firewall-cmd --permanent --add-service=http >/dev/null 2>&1 || true
     firewall-cmd --permanent --add-service=https >/dev/null 2>&1 || true
+    firewall-cmd --permanent --add-port=$WEB_PORT/tcp >/dev/null 2>&1 || true
+    firewall-cmd --permanent --add-port=3000/tcp >/dev/null 2>&1 || true
     firewall-cmd --reload >/dev/null 2>&1 || true
   fi
 
@@ -1359,10 +1397,47 @@ cmd_update() {
   cd "$INSTALL_DIR/apps/server"
   npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
 
-  # If public website directory exists, sync updated website assets
-  if [ -d "/var/www/vps-panel-web" ] && [ -d "$INSTALL_DIR/apps/web" ]; then
+  # Sync updated website assets & ensure permissions
+  if [ -d "$INSTALL_DIR/apps/web" ]; then
+    mkdir -p /var/www/vps-panel-web
     echo -e "${YELLOW}[*] Syncing updated public website assets to /var/www/vps-panel-web...${NC}"
     cp -r "$INSTALL_DIR/apps/web/"* /var/www/vps-panel-web/ 2>/dev/null || true
+    chmod -R 755 /var/www/vps-panel-web 2>/dev/null || true
+    chown -R www-data:www-data /var/www/vps-panel-web 2>/dev/null || chown -R nginx:nginx /var/www/vps-panel-web 2>/dev/null || true
+  fi
+
+  # Ensure firewall allows port 3000 for public website
+  if command -v ufw >/dev/null 2>&1; then
+    ufw allow 3000/tcp >/dev/null 2>&1 || true
+  elif command -v firewall-cmd >/dev/null 2>&1; then
+    firewall-cmd --permanent --add-port=3000/tcp >/dev/null 2>&1 || true
+    firewall-cmd --reload >/dev/null 2>&1 || true
+  fi
+
+  # Ensure vps-web service is active
+  if is_systemd && [ -d "$INSTALL_DIR/apps/web" ]; then
+    if [ ! -f /etc/systemd/system/vps-web.service ]; then
+      cat > /etc/systemd/system/vps-web.service << WEBSERVICEOF
+[Unit]
+Description=VPS Panel Public Web Portal
+After=network.target vps-panel.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$INSTALL_DIR/apps/web
+Environment=WEB_PORT=3000
+Environment=HOST=0.0.0.0
+ExecStart=/usr/bin/env node server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+WEBSERVICEOF
+      systemctl daemon-reload
+      systemctl enable vps-web 2>/dev/null || true
+    fi
   fi
 
   install_cli_binary
